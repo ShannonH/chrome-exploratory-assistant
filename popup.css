@@ -35,7 +35,7 @@ body {
     background: var(--bg-primary);
     color: var(--text-primary);
     line-height: 1.5;
-    width: 380px;
+    width: 450px;
     height: 600px;
     overflow: hidden;
 }
@@ -349,6 +349,14 @@ body {
     border-left-color: var(--danger-color);
 }
 
+.step-item.pending {
+    border-left-color: var(--warning-color);
+}
+
+.step-item.in-progress {
+    border-left-color: var(--accent-color);
+}
+
 .step-header {
     display: flex;
     justify-content: space-between;
@@ -376,6 +384,16 @@ body {
 
 .step-status.fail {
     background: var(--danger-color);
+    color: white;
+}
+
+.step-status.pending {
+    background: var(--warning-color);
+    color: white;
+}
+
+.step-status.in-progress {
+    background: var(--accent-color);
     color: white;
 }
 

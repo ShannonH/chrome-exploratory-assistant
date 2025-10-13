@@ -6,8 +6,7 @@ class TestingAssistant {
         this.sessionTimer = null;
         this.testSteps = [];
         this.screenshots = [];
-        this.testScript = [];
-        this.currentScriptIndex = 0;
+        // Legacy script tracking removed - now using testSteps directly
         
         this.initializeUI();
         this.loadSavedData();
@@ -242,27 +241,34 @@ class TestingAssistant {
             return;
         }
 
-        const lastStep = this.testSteps[this.testSteps.length - 1];
-        lastStep.status = status;
+        // Find the first pending or in-progress step, or use the last step
+        let targetStep = this.testSteps.find(step => step.status === 'pending' || step.status === 'in-progress');
+        if (!targetStep) {
+            targetStep = this.testSteps[this.testSteps.length - 1];
+        }
+
+        targetStep.status = status;
         this.updateStepsList();
         this.saveData();
         
-        this.showNotification(`Step marked as ${status}`, 'success');
+        const stepIndex = this.testSteps.indexOf(targetStep) + 1;
+        this.showNotification(`Step ${stepIndex} marked as ${status}`, 'success');
     }
 
     updateStepsList() {
         const stepsList = document.getElementById('stepsList');
         stepsList.innerHTML = '';
 
-        this.testSteps.slice(-5).forEach((step, index) => {
+        this.testSteps.forEach((step, index) => {
             const stepElement = document.createElement('div');
             stepElement.className = `step-item ${step.status} fade-in`;
             
-            const actualStepNumber = this.testSteps.length - 5 + index + 1;
+            const stepNumber = index + 1;
+            const scriptIndicator = step.fromScript ? '📋 ' : '';
             
             stepElement.innerHTML = `
                 <div class="step-header">
-                    <span class="step-number">Step ${actualStepNumber}</span>
+                    <span class="step-number">${scriptIndicator}Step ${stepNumber}</span>
                     <span class="step-status ${step.status}">${step.status}</span>
                 </div>
                 <div class="step-description">${step.description}</div>
@@ -314,53 +320,44 @@ class TestingAssistant {
             return;
         }
 
-        // Parse script into steps
-        this.testScript = scriptText.split('\n')
+        // Check if there's an active session, if not start one
+        if (!this.currentSession || this.currentSession.status !== 'active') {
+            this.startSession();
+        }
+
+        // Parse script into test steps and add them to the main test steps
+        const scriptSteps = scriptText.split('\n')
             .map(line => line.trim())
             .filter(line => line && !line.startsWith('#'))
-            .map((line, index) => ({
-                id: index,
-                text: line.replace(/^\d+\.\s*/, ''), // Remove numbering
-                completed: false
-            }));
+            .map(line => line.replace(/^\d+\.\s*/, '')); // Remove numbering
 
-        this.currentScriptIndex = 0;
-        this.updateScriptProgress();
-        document.getElementById('scriptProgress').style.display = 'block';
-        
-        this.showNotification('Script loaded successfully', 'success');
+        // Add each script step as a test step
+        scriptSteps.forEach(stepText => {
+            const step = {
+                id: Date.now() + Math.random(), // Ensure unique IDs
+                timestamp: new Date(),
+                description: stepText,
+                status: 'pending',
+                screenshots: [],
+                fromScript: true // Mark as script-generated
+            };
+            this.testSteps.push(step);
+        });
+
+        // Update the main view to show the steps
+        this.updateStepsList();
+        this.updateSessionInfo();
         this.saveData();
+        
+        // Switch to the main test session tab to show the loaded steps
+        this.switchTab('test');
+        
+        this.showNotification(`Script loaded: ${scriptSteps.length} steps added`, 'success');
     }
 
     clearScript() {
         document.getElementById('scriptText').value = '';
         document.getElementById('scriptProgress').style.display = 'none';
-        this.testScript = [];
-        this.currentScriptIndex = 0;
-        this.saveData();
-    }
-
-    updateScriptProgress() {
-        const progressList = document.getElementById('progressList');
-        progressList.innerHTML = '';
-
-        this.testScript.forEach((step, index) => {
-            const progressItem = document.createElement('div');
-            progressItem.className = 'progress-item';
-            
-            progressItem.innerHTML = `
-                <input type="checkbox" class="progress-checkbox" ${step.completed ? 'checked' : ''} 
-                       onchange="testingAssistant.toggleScriptStep(${index})">
-                <span class="progress-text ${step.completed ? 'completed' : ''}">${step.text}</span>
-            `;
-            
-            progressList.appendChild(progressItem);
-        });
-    }
-
-    toggleScriptStep(index) {
-        this.testScript[index].completed = !this.testScript[index].completed;
-        this.updateScriptProgress();
         this.saveData();
     }
 
@@ -376,7 +373,7 @@ class TestingAssistant {
                 timestamp: includeTimestamps ? step.timestamp : undefined
             })),
             screenshots: includeScreenshots ? this.screenshots : [],
-            script: this.testScript,
+            scriptSteps: this.testSteps.filter(step => step.fromScript).length,
             exportedAt: new Date()
         };
 
@@ -486,14 +483,11 @@ class TestingAssistant {
             this.currentSession = null;
             this.testSteps = [];
             this.screenshots = [];
-            this.testScript = [];
-            this.currentScriptIndex = 0;
             
             // Clear only this extension's data
             chrome.storage.local.remove('testingAssistantData');
             
             this.updateStepsList();
-            this.updateScriptProgress();
             this.updateExportSummary();
             this.updateSessionInfo();
             
@@ -526,7 +520,7 @@ class TestingAssistant {
             </div>
             <div class="summary-item">
                 <span>Script Steps:</span>
-                <span>${this.testScript.length}</span>
+                <span>${this.testSteps.filter(step => step.fromScript).length}</span>
             </div>
         `;
     }
@@ -565,8 +559,7 @@ class TestingAssistant {
             currentSession: this.currentSession,
             testSteps: this.testSteps,
             screenshots: this.screenshots,
-            testScript: this.testScript,
-            currentScriptIndex: this.currentScriptIndex
+            // Script data now stored within testSteps with fromScript flag
         };
         
         chrome.storage.local.set({ testingAssistantData: data });
@@ -581,17 +574,10 @@ class TestingAssistant {
                 this.currentSession = data.currentSession || null;
                 this.testSteps = data.testSteps || [];
                 this.screenshots = data.screenshots || [];
-                this.testScript = data.testScript || [];
-                this.currentScriptIndex = data.currentScriptIndex || 0;
                 
                 // Restore UI state
                 this.updateStepsList();
                 this.updateExportSummary();
-                
-                if (this.testScript.length > 0) {
-                    document.getElementById('scriptProgress').style.display = 'block';
-                    this.updateScriptProgress();
-                }
                 
                 // Check if there's an active session
                 if (this.currentSession && this.currentSession.status === 'active') {
