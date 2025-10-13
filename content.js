@@ -364,7 +364,12 @@ class ContentScriptHandler {
         const expectedResult = document.getElementById('expectedResult').value.trim();
         
         if (!description) {
-            alert('Please enter a test step description');
+            this.showOverlay(`
+                <div style="color: #dc2626; font-weight: 500;">❌ Validation Error</div>
+                <div style="margin-top: 8px; font-size: 13px; color: #64748b;">
+                    Please enter a test step description.
+                </div>
+            `);
             return;
         }
 

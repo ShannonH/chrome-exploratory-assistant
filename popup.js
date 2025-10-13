@@ -118,7 +118,7 @@ class TestingAssistant {
             this.currentSession.status = 'completed';
         }
 
-        this.clearInterval(this.sessionTimer);
+        clearInterval(this.sessionTimer);
         
         // Update UI
         document.getElementById('startSession').disabled = false;
@@ -167,10 +167,21 @@ class TestingAssistant {
 
     async takeScreenshot() {
         try {
-            const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+            const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+            if (tabs.length === 0) {
+                this.showNotification('No active tab found', 'error');
+                return;
+            }
+            
+            const tab = tabs[0];
             
             // Send message to content script to prepare for screenshot
-            await chrome.tabs.sendMessage(tab.id, { action: 'prepareScreenshot' });
+            try {
+                await chrome.tabs.sendMessage(tab.id, { action: 'prepareScreenshot' });
+            } catch (error) {
+                // Content script might not be injected yet, continue anyway
+                console.log('Content script not available:', error);
+            }
             
             // Capture screenshot
             const dataUrl = await chrome.tabs.captureVisibleTab(null, { format: 'png' });
@@ -247,9 +258,11 @@ class TestingAssistant {
             const stepElement = document.createElement('div');
             stepElement.className = `step-item ${step.status} fade-in`;
             
+            const actualStepNumber = this.testSteps.length - 5 + index + 1;
+            
             stepElement.innerHTML = `
                 <div class="step-header">
-                    <span class="step-number">Step ${this.testSteps.length - 4 + index}</span>
+                    <span class="step-number">Step ${actualStepNumber}</span>
                     <span class="step-status ${step.status}">${step.status}</span>
                 </div>
                 <div class="step-description">${step.description}</div>
@@ -449,11 +462,23 @@ class TestingAssistant {
     }
 
     downloadBlob(blob, filename) {
-        chrome.downloads.download({
-            url: URL.createObjectURL(blob),
-            filename: filename,
-            saveAs: true
-        });
+        try {
+            chrome.downloads.download({
+                url: URL.createObjectURL(blob),
+                filename: filename,
+                saveAs: true
+            }, (downloadId) => {
+                if (chrome.runtime.lastError) {
+                    console.error('Download failed:', chrome.runtime.lastError);
+                    this.showNotification('Download failed', 'error');
+                } else {
+                    this.showNotification('File downloaded successfully', 'success');
+                }
+            });
+        } catch (error) {
+            console.error('Download error:', error);
+            this.showNotification('Download failed', 'error');
+        }
     }
 
     clearAllData() {
@@ -464,7 +489,8 @@ class TestingAssistant {
             this.testScript = [];
             this.currentScriptIndex = 0;
             
-            chrome.storage.local.clear();
+            // Clear only this extension's data
+            chrome.storage.local.remove('testingAssistantData');
             
             this.updateStepsList();
             this.updateScriptProgress();

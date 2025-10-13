@@ -456,14 +456,9 @@ class BackgroundService {
     }
 
     showNotification(title, message, type = 'basic') {
-        if (chrome.notifications) {
-            chrome.notifications.create({
-                type: 'basic',
-                iconUrl: 'icons/icon48.png',
-                title: title,
-                message: message
-            });
-        }
+        // Note: notifications permission not included in manifest
+        // Using console log as fallback
+        console.log(`${title}: ${message}`);
     }
 
     showWelcomeNotification() {
