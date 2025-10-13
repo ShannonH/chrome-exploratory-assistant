@@ -39,6 +39,32 @@
   "side_panel": {
     "default_path": "sidepanel.html"
   },
+  "commands": {
+    "open-testing-assistant": {
+      "suggested_key": {
+        "default": "Alt+T"
+      },
+      "description": "Open Testing Assistant"
+    },
+    "take-screenshot": {
+      "suggested_key": {
+        "default": "Alt+S"
+      },
+      "description": "Take Screenshot"
+    },
+    "mark-pass": {
+      "suggested_key": {
+        "default": "Alt+P"
+      },
+      "description": "Mark Current Step as Pass"
+    },
+    "mark-fail": {
+      "suggested_key": {
+        "default": "Alt+F"
+      },
+      "description": "Mark Current Step as Fail"
+    }
+  },
   "web_accessible_resources": [
     {
       "resources": ["overlay.html", "overlay.css"],

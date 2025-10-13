@@ -53,6 +53,9 @@ class TestingAssistant {
         // Side panel
         document.getElementById('openSidePanel').addEventListener('click', () => this.openSidePanel());
 
+        // Help toggle
+        document.getElementById('helpToggle').addEventListener('click', () => this.toggleHelp());
+
         // Drag and drop for script upload
         const uploadArea = document.getElementById('uploadArea');
         uploadArea.addEventListener('dragover', (e) => {
@@ -560,6 +563,8 @@ class TestingAssistant {
                 if (chrome.sidePanel.open) {
                     // Method 1: Direct open
                     await chrome.sidePanel.open({ windowId: chrome.windows.WINDOW_ID_CURRENT });
+                    this.showNotification('Side panel opened!', 'success');
+                    return;
                 } else if (chrome.sidePanel.setOptions) {
                     // Method 2: Set options then send message to background
                     await chrome.sidePanel.setOptions({
@@ -568,28 +573,96 @@ class TestingAssistant {
                     });
                     // Send message to background to handle opening
                     chrome.runtime.sendMessage({ action: 'openSidePanel' });
-                } else {
-                    // Method 3: Send message to background script
-                    chrome.runtime.sendMessage({ action: 'openSidePanel' });
+                    this.showNotification('Side panel enabled - check browser sidebar', 'success');
+                    return;
                 }
-                this.showNotification('Opening side panel...', 'success');
-            } else {
-                throw new Error('Side panel API not available');
             }
+            
+            // Fallback: Try to open detached popup window
+            this.openDetachedWindow();
+            
         } catch (error) {
             console.error('Failed to open side panel:', error);
-            this.showNotification('Side panel not supported in this Chrome version', 'error');
+            // Fallback: Try to open detached popup window  
+            this.openDetachedWindow();
+        }
+    }
+
+    async openDetachedWindow() {
+        try {
+            // Create a detached popup window as alternative to side panel
+            const windowInfo = await chrome.windows.create({
+                url: chrome.runtime.getURL('sidepanel.html'),
+                type: 'popup',
+                width: 350,
+                height: 600,
+                left: screen.width - 370, // Position on the right side
+                top: 100,
+                focused: false // Don't steal focus from main window
+            });
+            
+            this.showNotification('Testing window opened - stays on top for easy access!', 'success');
+            
+            // Store window ID to potentially close it later
+            chrome.storage.local.set({ 'detachedWindowId': windowInfo.id });
+            
+        } catch (error) {
+            console.error('Failed to open detached window:', error);
+            this.showNotification('Alternative view options: Pin extension icon or use keyboard shortcut Alt+T', 'info');
         }
     }
 
     formatTimestamp(timestamp) {
         try {
-            // Handle both Date objects and date strings
-            const date = timestamp instanceof Date ? timestamp : new Date(timestamp);
+            let date;
+            
+            if (!timestamp) {
+                return new Date().toLocaleString();
+            }
+            
+            // Handle multiple timestamp formats
+            if (timestamp instanceof Date) {
+                date = timestamp;
+            } else if (typeof timestamp === 'string') {
+                // Handle ISO strings and other formats
+                date = new Date(timestamp);
+            } else if (typeof timestamp === 'number') {
+                // Handle Unix timestamps (both seconds and milliseconds)
+                date = new Date(timestamp > 1000000000000 ? timestamp : timestamp * 1000);
+            } else {
+                // Fallback: try to convert whatever we got
+                date = new Date(timestamp);
+            }
+            
+            // Verify the date is valid
+            if (isNaN(date.getTime())) {
+                console.warn('Invalid timestamp:', timestamp);
+                return new Date().toLocaleString() + ' (now)';
+            }
+            
             return date.toLocaleString();
         } catch (error) {
             console.error('Error formatting timestamp:', error, timestamp);
-            return 'Invalid Date';
+            return new Date().toLocaleString() + ' (fallback)';
+        }
+    }
+
+    toggleHelp() {
+        const helpSection = document.getElementById('helpSection');
+        if (helpSection.style.display === 'none' || !helpSection.style.display) {
+            helpSection.style.display = 'flex';
+            // Close help when clicking outside
+            setTimeout(() => {
+                const closeHelp = (e) => {
+                    if (e.target === helpSection) {
+                        helpSection.style.display = 'none';
+                        document.removeEventListener('click', closeHelp);
+                    }
+                };
+                document.addEventListener('click', closeHelp);
+            }, 100);
+        } else {
+            helpSection.style.display = 'none';
         }
     }
 

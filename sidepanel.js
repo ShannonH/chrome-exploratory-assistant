@@ -548,12 +548,36 @@ class SidePanelTestingAssistant {
 
     formatTimestamp(timestamp) {
         try {
-            // Handle both Date objects and date strings
-            const date = timestamp instanceof Date ? timestamp : new Date(timestamp);
+            let date;
+            
+            if (!timestamp) {
+                return new Date().toLocaleString();
+            }
+            
+            // Handle multiple timestamp formats
+            if (timestamp instanceof Date) {
+                date = timestamp;
+            } else if (typeof timestamp === 'string') {
+                // Handle ISO strings and other formats
+                date = new Date(timestamp);
+            } else if (typeof timestamp === 'number') {
+                // Handle Unix timestamps (both seconds and milliseconds)
+                date = new Date(timestamp > 1000000000000 ? timestamp : timestamp * 1000);
+            } else {
+                // Fallback: try to convert whatever we got
+                date = new Date(timestamp);
+            }
+            
+            // Verify the date is valid
+            if (isNaN(date.getTime())) {
+                console.warn('Invalid timestamp:', timestamp);
+                return new Date().toLocaleString() + ' (now)';
+            }
+            
             return date.toLocaleString();
         } catch (error) {
             console.error('Error formatting timestamp:', error, timestamp);
-            return 'Invalid Date';
+            return new Date().toLocaleString() + ' (fallback)';
         }
     }
 

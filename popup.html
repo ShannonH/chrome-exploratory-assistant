@@ -14,9 +14,12 @@
                 <h1>Testing Assistant</h1>
             </div>
             <div class="header-controls">
-                <button id="openSidePanel" class="btn btn-outline btn-small" title="Open in Side Panel">
+                <button id="openSidePanel" class="btn btn-outline btn-small" title="Pin for Testing - Opens detached window or side panel for always-visible testing">
                     <span class="btn-icon">📌</span>
-                    Side Panel
+                    Pin Assistant
+                </button>
+                <button id="helpToggle" class="btn btn-outline btn-small" title="Keyboard Shortcuts & Tips">
+                    <span class="btn-icon">❓</span>
                 </button>
                 <div class="status-indicator" id="statusIndicator">
                     <span class="status-dot"></span>
@@ -173,6 +176,33 @@ Example:
                 <div class="export-summary" id="exportSummary">
                     <!-- Summary will be populated by JavaScript -->
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Help Section -->
+    <div class="help-section" id="helpSection" style="display: none;">
+        <div class="help-content">
+            <h4>Quick Access Options</h4>
+            <div class="help-item">
+                <strong>📌 Pin Assistant:</strong> Creates a detached window that stays visible while testing
+            </div>
+            <div class="help-item">
+                <strong>⌨️ Keyboard Shortcuts:</strong>
+                <ul>
+                    <li><kbd>Alt+T</kbd> - Open Testing Assistant</li>
+                    <li><kbd>Alt+S</kbd> - Take Screenshot</li>
+                    <li><kbd>Alt+P</kbd> - Mark Step as Pass</li>
+                    <li><kbd>Alt+F</kbd> - Mark Step as Fail</li>
+                </ul>
+            </div>
+            <div class="help-item">
+                <strong>💡 Tips:</strong>
+                <ul>
+                    <li>Pin extension to Chrome toolbar for quick access</li>
+                    <li>Use right-click context menu for quick actions</li>
+                    <li>Load test scripts to guide systematic testing</li>
+                </ul>
             </div>
         </div>
     </div>

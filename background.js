@@ -34,6 +34,11 @@ class BackgroundService {
 
         // Context menu for quick actions
         this.setupContextMenus();
+
+        // Handle keyboard shortcuts
+        chrome.commands.onCommand.addListener((command) => {
+            this.handleCommand(command);
+        });
     }
 
     setupContextMenus() {
@@ -499,6 +504,52 @@ class BackgroundService {
             }
         } catch (error) {
             console.error('Failed to open side panel:', error);
+        }
+    }
+
+    async handleCommand(command) {
+        try {
+            const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+            
+            switch (command) {
+                case 'open-testing-assistant':
+                    // Try to open side panel, fallback to detached window
+                    try {
+                        if (chrome.sidePanel && chrome.sidePanel.open) {
+                            await chrome.sidePanel.open({ windowId: tab.windowId });
+                        } else {
+                            // Open detached window
+                            await chrome.windows.create({
+                                url: chrome.runtime.getURL('sidepanel.html'),
+                                type: 'popup',
+                                width: 350,
+                                height: 600,
+                                left: screen.width - 370,
+                                top: 100,
+                                focused: true
+                            });
+                        }
+                    } catch (error) {
+                        console.error('Failed to open testing assistant:', error);
+                    }
+                    break;
+                    
+                case 'take-screenshot':
+                    await this.captureScreenshot(tab);
+                    break;
+                    
+                case 'mark-pass':
+                case 'mark-fail':
+                    // Send message to content script or popup
+                    const status = command === 'mark-pass' ? 'pass' : 'fail';
+                    chrome.runtime.sendMessage({ 
+                        action: 'markStep', 
+                        status: status 
+                    });
+                    break;
+            }
+        } catch (error) {
+            console.error('Command handling error:', error);
         }
     }
 
