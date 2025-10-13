@@ -81,6 +81,11 @@ class BackgroundService {
                     sendResponse({ success: true });
                     break;
 
+                case 'openSidePanel':
+                    await this.openSidePanel(sender.tab);
+                    sendResponse({ success: true });
+                    break;
+
                 case 'getSessionData':
                     const sessionData = await this.getSessionData();
                     sendResponse({ success: true, data: sessionData });
@@ -466,6 +471,35 @@ class BackgroundService {
             'Exploratory Testing Assistant',
             'Extension installed! Click the icon to start your first test session.'
         );
+    }
+
+    async openSidePanel(tab) {
+        try {
+            // Multiple approaches for Chrome 141 compatibility
+            if (chrome.sidePanel) {
+                if (chrome.sidePanel.open) {
+                    // Method 1: Modern API (Chrome 114+)
+                    await chrome.sidePanel.open({ 
+                        tabId: tab ? tab.id : undefined,
+                        windowId: tab ? tab.windowId : chrome.windows.WINDOW_ID_CURRENT 
+                    });
+                } else if (chrome.sidePanel.setOptions) {
+                    // Method 2: Set options and let user open manually
+                    await chrome.sidePanel.setOptions({
+                        tabId: tab ? tab.id : undefined,
+                        path: 'sidepanel.html',
+                        enabled: true
+                    });
+                    console.log('Side panel enabled - user can open it manually');
+                } else {
+                    console.error('Side panel API methods not available');
+                }
+            } else {
+                console.error('Side panel API not available in this Chrome version');
+            }
+        } catch (error) {
+            console.error('Failed to open side panel:', error);
+        }
     }
 
     openPopup() {

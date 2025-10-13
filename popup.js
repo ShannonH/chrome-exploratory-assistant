@@ -555,12 +555,30 @@ class TestingAssistant {
 
     async openSidePanel() {
         try {
-            // Open the side panel
-            await chrome.sidePanel.open({ windowId: chrome.windows.WINDOW_ID_CURRENT });
-            this.showNotification('Side panel opened', 'success');
+            // Try multiple methods for opening side panel (Chrome 141 compatibility)
+            if (chrome.sidePanel) {
+                if (chrome.sidePanel.open) {
+                    // Method 1: Direct open
+                    await chrome.sidePanel.open({ windowId: chrome.windows.WINDOW_ID_CURRENT });
+                } else if (chrome.sidePanel.setOptions) {
+                    // Method 2: Set options then send message to background
+                    await chrome.sidePanel.setOptions({
+                        path: 'sidepanel.html',
+                        enabled: true
+                    });
+                    // Send message to background to handle opening
+                    chrome.runtime.sendMessage({ action: 'openSidePanel' });
+                } else {
+                    // Method 3: Send message to background script
+                    chrome.runtime.sendMessage({ action: 'openSidePanel' });
+                }
+                this.showNotification('Opening side panel...', 'success');
+            } else {
+                throw new Error('Side panel API not available');
+            }
         } catch (error) {
             console.error('Failed to open side panel:', error);
-            this.showNotification('Failed to open side panel', 'error');
+            this.showNotification('Side panel not supported in this Chrome version', 'error');
         }
     }
 

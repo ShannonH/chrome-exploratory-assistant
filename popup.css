@@ -35,8 +35,11 @@ body {
     background: var(--bg-primary);
     color: var(--text-primary);
     line-height: 1.5;
-    width: 450px;
-    height: 600px;
+    min-width: 400px !important;
+    width: 400px !important;
+    max-width: 400px !important;
+    min-height: 500px !important;
+    height: 500px !important;
     overflow: hidden;
 }
 
@@ -48,7 +51,7 @@ body {
 
 /* Header Styles */
 .header {
-    padding: 20px;
+    padding: 16px;
     background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
     color: white;
     display: flex;
@@ -116,11 +119,11 @@ body {
 
 .tab-button {
     flex: 1;
-    padding: 12px 16px;
+    padding: 10px 12px;
     border: none;
     background: transparent;
     color: var(--text-secondary);
-    font-size: 14px;
+    font-size: 12px;
     font-weight: 500;
     cursor: pointer;
     transition: var(--transition);
@@ -158,11 +161,11 @@ body {
 .btn {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
-    padding: 10px 16px;
+    gap: 6px;
+    padding: 8px 12px;
     border: none;
     border-radius: var(--border-radius);
-    font-size: 14px;
+    font-size: 12px;
     font-weight: 500;
     cursor: pointer;
     transition: var(--transition);
@@ -303,8 +306,8 @@ body {
 .action-buttons {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 12px;
-    margin-bottom: 20px;
+    gap: 8px;
+    margin-bottom: 16px;
 }
 
 /* Step Input */
