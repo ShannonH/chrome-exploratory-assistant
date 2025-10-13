@@ -1,29 +1,17 @@
-// Popup JavaScript for Exploratory Testing Assistant
-class TestingAssistant {
+// Side Panel JavaScript for Exploratory Testing Assistant
+class SidePanelTestingAssistant {
     constructor() {
         this.currentSession = null;
         this.sessionStartTime = null;
         this.sessionTimer = null;
         this.testSteps = [];
         this.screenshots = [];
-        // Legacy script tracking removed - now using testSteps directly
         
         this.initializeUI();
         this.loadSavedData();
     }
 
     initializeUI() {
-        // Tab switching
-        const tabButtons = document.querySelectorAll('.tab-button');
-        const tabContents = document.querySelectorAll('.tab-content');
-
-        tabButtons.forEach(button => {
-            button.addEventListener('click', () => {
-                const tabName = button.dataset.tab;
-                this.switchTab(tabName);
-            });
-        });
-
         // Session controls
         document.getElementById('startSession').addEventListener('click', () => this.startSession());
         document.getElementById('endSession').addEventListener('click', () => this.endSession());
@@ -38,20 +26,23 @@ class TestingAssistant {
         document.getElementById('saveStep').addEventListener('click', () => this.saveStep());
         document.getElementById('cancelStep').addEventListener('click', () => this.hideStepInput());
 
-        // Script tab
+        // Modal controls
+        document.getElementById('loadScript').addEventListener('click', () => this.showScriptModal());
+        document.getElementById('exportData').addEventListener('click', () => this.showExportModal());
+
+        // Script modal
+        document.getElementById('closeScriptModal').addEventListener('click', () => this.hideScriptModal());
         document.getElementById('uploadArea').addEventListener('click', () => {
             document.getElementById('fileInput').click();
         });
         document.getElementById('fileInput').addEventListener('change', (e) => this.handleFileUpload(e));
-        document.getElementById('loadScript').addEventListener('click', () => this.loadScript());
+        document.getElementById('loadScriptBtn').addEventListener('click', () => this.loadScript());
         document.getElementById('clearScript').addEventListener('click', () => this.clearScript());
 
-        // Export tab
-        document.getElementById('exportData').addEventListener('click', () => this.exportData());
+        // Export modal
+        document.getElementById('closeExportModal').addEventListener('click', () => this.hideExportModal());
+        document.getElementById('exportDataBtn').addEventListener('click', () => this.exportData());
         document.getElementById('clearData').addEventListener('click', () => this.clearAllData());
-
-        // Side panel
-        document.getElementById('openSidePanel').addEventListener('click', () => this.openSidePanel());
 
         // Drag and drop for script upload
         const uploadArea = document.getElementById('uploadArea');
@@ -69,23 +60,6 @@ class TestingAssistant {
         });
 
         this.updateExportSummary();
-    }
-
-    switchTab(tabName) {
-        // Update active tab button
-        document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
-        document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
-
-        // Show corresponding tab content
-        document.querySelectorAll('.tab-content').forEach(content => {
-            content.style.display = 'none';
-        });
-        document.getElementById(`${tabName}Tab`).style.display = 'block';
-
-        // Update content based on tab
-        if (tabName === 'export') {
-            this.updateExportSummary();
-        }
     }
 
     async startSession() {
@@ -181,7 +155,6 @@ class TestingAssistant {
             try {
                 await chrome.tabs.sendMessage(tab.id, { action: 'prepareScreenshot' });
             } catch (error) {
-                // Content script might not be injected yet, continue anyway
                 console.log('Content script not available:', error);
             }
             
@@ -200,7 +173,6 @@ class TestingAssistant {
             this.updateSessionInfo();
             this.saveData();
             
-            // Show success feedback
             this.showNotification('Screenshot captured!', 'success');
             
         } catch (error) {
@@ -294,6 +266,25 @@ class TestingAssistant {
         }
     }
 
+    // Modal management
+    showScriptModal() {
+        document.getElementById('scriptModal').style.display = 'flex';
+    }
+
+    hideScriptModal() {
+        document.getElementById('scriptModal').style.display = 'none';
+    }
+
+    showExportModal() {
+        this.updateExportSummary();
+        document.getElementById('exportModal').style.display = 'flex';
+    }
+
+    hideExportModal() {
+        document.getElementById('exportModal').style.display = 'none';
+    }
+
+    // Script functionality
     handleFileUpload(event) {
         const file = event.target.files[0];
         if (file) {
@@ -347,23 +338,21 @@ class TestingAssistant {
             this.testSteps.push(step);
         });
 
-        // Update the main view to show the steps
+        // Update the view to show the steps
         this.updateStepsList();
         this.updateSessionInfo();
         this.saveData();
         
-        // Switch to the main test session tab to show the loaded steps
-        this.switchTab('test');
-        
+        this.hideScriptModal();
         this.showNotification(`Script loaded: ${scriptSteps.length} steps added`, 'success');
     }
 
     clearScript() {
         document.getElementById('scriptText').value = '';
-        document.getElementById('scriptProgress').style.display = 'none';
         this.saveData();
     }
 
+    // Export functionality
     exportData() {
         const format = document.querySelector('input[name="format"]:checked').value;
         const includeScreenshots = document.getElementById('includeScreenshots').checked;
@@ -385,6 +374,8 @@ class TestingAssistant {
         } else {
             this.downloadHTML(exportData);
         }
+
+        this.hideExportModal();
     }
 
     downloadJSON(data) {
@@ -494,6 +485,7 @@ class TestingAssistant {
             this.updateExportSummary();
             this.updateSessionInfo();
             
+            this.hideExportModal();
             this.showNotification('All data cleared', 'success');
         }
     }
@@ -540,9 +532,10 @@ class TestingAssistant {
             color: white;
             border-radius: 8px;
             z-index: 10000;
-            font-size: 14px;
+            font-size: 12px;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             animation: slideIn 0.3s ease-out;
+            max-width: 280px;
         `;
         notification.textContent = message;
         
@@ -551,17 +544,6 @@ class TestingAssistant {
         setTimeout(() => {
             notification.remove();
         }, 3000);
-    }
-
-    async openSidePanel() {
-        try {
-            // Open the side panel
-            await chrome.sidePanel.open({ windowId: chrome.windows.WINDOW_ID_CURRENT });
-            this.showNotification('Side panel opened', 'success');
-        } catch (error) {
-            console.error('Failed to open side panel:', error);
-            this.showNotification('Failed to open side panel', 'error');
-        }
     }
 
     formatTimestamp(timestamp) {
@@ -617,8 +599,8 @@ class TestingAssistant {
     }
 }
 
-// Initialize the application when the popup loads
-const testingAssistant = new TestingAssistant();
+// Initialize the side panel application when loaded
+const sidePanelTestingAssistant = new SidePanelTestingAssistant();
 
-// Make it globally accessible for HTML event handlers
-window.testingAssistant = testingAssistant;
+// Make it globally accessible
+window.sidePanelTestingAssistant = sidePanelTestingAssistant;

@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Testing Assistant - Side Panel</title>
+    <link rel="stylesheet" href="sidepanel.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="logo">
+                <div class="logo-icon">🔍</div>
+                <h1>Testing Assistant</h1>
+            </div>
+            <div class="status-indicator" id="statusIndicator">
+                <span class="status-dot"></span>
+                <span id="statusText">Ready</span>
+            </div>
+        </header>
+
+        <div class="session-controls">
+            <button id="startSession" class="btn btn-primary">
+                <span class="btn-icon">▶️</span>
+                Start Session
+            </button>
+            <button id="endSession" class="btn btn-secondary" disabled>
+                <span class="btn-icon">⏹️</span>
+                End Session
+            </button>
+        </div>
+
+        <div class="test-info" id="testInfo" style="display: none;">
+            <div class="info-card">
+                <div class="info-row">
+                    <span class="label">Session Time:</span>
+                    <span id="sessionTime">00:00:00</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Steps:</span>
+                    <span id="stepCount">0</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Screenshots:</span>
+                    <span id="screenshotCount">0</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="action-buttons" id="actionButtons" style="display: none;">
+            <button id="takeScreenshot" class="btn btn-accent">
+                <span class="btn-icon">📸</span>
+                Screenshot
+            </button>
+            <button id="addStep" class="btn btn-outline">
+                <span class="btn-icon">➕</span>
+                Add Step
+            </button>
+            <button id="markPass" class="btn btn-success">
+                <span class="btn-icon">✅</span>
+                Pass
+            </button>
+            <button id="markFail" class="btn btn-danger">
+                <span class="btn-icon">❌</span>
+                Fail
+            </button>
+        </div>
+
+        <div class="step-input" id="stepInput" style="display: none;">
+            <textarea id="stepDescription" placeholder="Describe this test step..."></textarea>
+            <div class="step-actions">
+                <button id="saveStep" class="btn btn-small btn-primary">Save</button>
+                <button id="cancelStep" class="btn btn-small btn-secondary">Cancel</button>
+            </div>
+        </div>
+
+        <div class="test-steps-section">
+            <div class="section-header">
+                <h3>Test Steps</h3>
+                <div class="section-actions">
+                    <button id="loadScript" class="btn btn-small btn-outline" title="Load Test Script">
+                        <span class="btn-icon">📋</span>
+                        Script
+                    </button>
+                    <button id="exportData" class="btn btn-small btn-outline" title="Export Data">
+                        <span class="btn-icon">💾</span>
+                        Export
+                    </button>
+                </div>
+            </div>
+            <div class="steps-list" id="stepsList"></div>
+        </div>
+
+        <!-- Script Loading Modal -->
+        <div class="modal" id="scriptModal" style="display: none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Load Test Script</h3>
+                    <button class="modal-close" id="closeScriptModal">×</button>
+                </div>
+                <div class="modal-body">
+                    <div class="upload-area" id="uploadArea">
+                        <div class="upload-icon">📄</div>
+                        <p>Drag & drop a text file or click to browse</p>
+                        <input type="file" id="fileInput" accept=".txt,.md" hidden>
+                    </div>
+                    <div class="script-textarea">
+                        <textarea id="scriptText" placeholder="Or paste your test script here...
+
+Example:
+1. Navigate to login page
+2. Enter valid credentials
+3. Click login button
+4. Verify successful login"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="loadScriptBtn" class="btn btn-primary">Load Script</button>
+                    <button id="clearScript" class="btn btn-secondary">Clear</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Export Modal -->
+        <div class="modal" id="exportModal" style="display: none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Export Test Results</h3>
+                    <button class="modal-close" id="closeExportModal">×</button>
+                </div>
+                <div class="modal-body">
+                    <div class="export-options">
+                        <div class="export-format">
+                            <label>
+                                <input type="radio" name="format" value="json" checked>
+                                <span class="radio-label">JSON Format</span>
+                            </label>
+                            <label>
+                                <input type="radio" name="format" value="html">
+                                <span class="radio-label">HTML Report</span>
+                            </label>
+                        </div>
+                        <div class="export-settings">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="includeScreenshots" checked>
+                                <span>Include Screenshots</span>
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="includeTimestamps" checked>
+                                <span>Include Timestamps</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="export-summary" id="exportSummary"></div>
+                </div>
+                <div class="modal-footer">
+                    <button id="exportDataBtn" class="btn btn-primary">Export Data</button>
+                    <button id="clearData" class="btn btn-danger">Clear All Data</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="sidepanel.js"></script>
+</body>
+</html>
