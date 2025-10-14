@@ -6,6 +6,7 @@ class TestingAssistant {
         this.sessionTimer = null;
         this.testSteps = [];
         this.screenshots = [];
+        this.selectedStepIndex = null; // Track which step is selected for pass/fail actions
         // Legacy script tracking removed - now using testSteps directly
         
         this.initializeUI();
@@ -247,18 +248,42 @@ class TestingAssistant {
             return;
         }
 
-        // Find the first pending or in-progress step, or use the last step
-        let targetStep = this.testSteps.find(step => step.status === 'pending' || step.status === 'in-progress');
-        if (!targetStep) {
-            targetStep = this.testSteps[this.testSteps.length - 1];
+        let targetStep;
+        let stepIndex;
+
+        // If a step is selected, use that one
+        if (this.selectedStepIndex !== null && this.selectedStepIndex < this.testSteps.length) {
+            targetStep = this.testSteps[this.selectedStepIndex];
+            stepIndex = this.selectedStepIndex;
+        } else {
+            // Find the first pending or in-progress step, or use the last step
+            targetStep = this.testSteps.find(step => step.status === 'pending' || step.status === 'in-progress');
+            if (!targetStep) {
+                targetStep = this.testSteps[this.testSteps.length - 1];
+            }
+            stepIndex = this.testSteps.indexOf(targetStep);
         }
 
         targetStep.status = status;
         this.updateStepsList();
         this.saveData();
         
-        const stepIndex = this.testSteps.indexOf(targetStep) + 1;
-        this.showNotification(`Step ${stepIndex} marked as ${status}`, 'success');
+        this.showNotification(`Step ${stepIndex + 1} marked as ${status}`, 'success');
+    }
+
+    selectStep(index) {
+        this.selectedStepIndex = index;
+        this.updateStepsList();
+        this.showNotification(`Step ${index + 1} selected`, 'info');
+    }
+
+    markStep(index, status) {
+        if (index >= 0 && index < this.testSteps.length) {
+            this.testSteps[index].status = status;
+            this.updateStepsList();
+            this.saveData();
+            this.showNotification(`Step ${index + 1} marked as ${status}`, 'success');
+        }
     }
 
     updateStepsList() {
@@ -268,18 +293,37 @@ class TestingAssistant {
         this.testSteps.forEach((step, index) => {
             const stepElement = document.createElement('div');
             stepElement.className = `step-item ${step.status} fade-in`;
+            stepElement.dataset.stepIndex = index;
             
             const stepNumber = index + 1;
             const scriptIndicator = step.fromScript ? '📋 ' : '';
+            const isSelected = this.selectedStepIndex === index;
             
             stepElement.innerHTML = `
                 <div class="step-header">
                     <span class="step-number">${scriptIndicator}Step ${stepNumber}</span>
                     <span class="step-status ${step.status}">${step.status}</span>
+                    ${isSelected ? '<span class="step-selected">🎯 Selected</span>' : ''}
                 </div>
                 <div class="step-description">${step.description}</div>
                 <div class="step-timestamp">${this.formatTimestamp(step.timestamp)}</div>
+                <div class="step-actions">
+                    <button class="btn-mini btn-success" onclick="testingAssistant.markStep(${index}, 'pass')" title="Mark as Pass">✅</button>
+                    <button class="btn-mini btn-danger" onclick="testingAssistant.markStep(${index}, 'fail')" title="Mark as Fail">❌</button>
+                    <button class="btn-mini btn-outline" onclick="testingAssistant.selectStep(${index})" title="Select this step">${isSelected ? '🎯' : '👆'}</button>
+                </div>
             `;
+            
+            // Add click handler to select step
+            stepElement.addEventListener('click', (e) => {
+                if (!e.target.closest('.step-actions')) {
+                    this.selectStep(index);
+                }
+            });
+            
+            if (isSelected) {
+                stepElement.classList.add('selected');
+            }
             
             stepsList.appendChild(stepElement);
         });
@@ -590,26 +634,89 @@ class TestingAssistant {
 
     async openDetachedWindow() {
         try {
-            // Create a detached popup window as alternative to side panel
-            const windowInfo = await chrome.windows.create({
-                url: chrome.runtime.getURL('sidepanel.html'),
-                type: 'popup',
-                width: 350,
-                height: 600,
-                left: screen.width - 370, // Position on the right side
-                top: 100,
-                focused: false // Don't steal focus from main window
-            });
-            
-            this.showNotification('Testing window opened - stays on top for easy access!', 'success');
-            
-            // Store window ID to potentially close it later
-            chrome.storage.local.set({ 'detachedWindowId': windowInfo.id });
+            // Check if we're in a Chrome extension environment
+            if (typeof chrome !== 'undefined' && chrome.windows && chrome.runtime) {
+                // Create a detached popup window as alternative to side panel
+                const windowInfo = await chrome.windows.create({
+                    url: chrome.runtime.getURL('sidepanel.html'),
+                    type: 'popup',
+                    width: 350,
+                    height: 600,
+                    left: screen.width - 370, // Position on the right side
+                    top: 100,
+                    focused: false // Don't steal focus from main window
+                });
+                
+                this.showNotification('Testing window opened - stays on top for easy access!', 'success');
+                
+                // Store window ID to potentially close it later
+                chrome.storage.local.set({ 'detachedWindowId': windowInfo.id });
+            } else {
+                // Fallback for browser testing environment
+                this.showDetachedWindowInstructions();
+            }
             
         } catch (error) {
             console.error('Failed to open detached window:', error);
-            this.showNotification('Alternative view options: Pin extension icon or use keyboard shortcut Alt+T', 'info');
+            this.showDetachedWindowInstructions();
         }
+    }
+
+    showDetachedWindowInstructions() {
+        // Create a more helpful instruction modal
+        const instructionsHtml = `
+            <div class="pin-instructions">
+                <h4>📌 Keep Extension Accessible</h4>
+                <div class="instruction-item">
+                    <strong>1. Pin to Toolbar:</strong> Right-click extension icon → "Pin"
+                </div>
+                <div class="instruction-item">
+                    <strong>2. Keyboard Shortcuts:</strong> 
+                    <ul>
+                        <li><kbd>Alt+T</kbd> - Open assistant</li>
+                        <li><kbd>Alt+S</kbd> - Take screenshot</li>
+                        <li><kbd>Alt+P</kbd> - Mark Pass</li>
+                        <li><kbd>Alt+F</kbd> - Mark Fail</li>
+                    </ul>
+                </div>
+                <div class="instruction-item">
+                    <strong>3. Browser Bookmarks:</strong> Bookmark this popup for quick access
+                </div>
+                <div class="instruction-item">
+                    <strong>4. Context Menu:</strong> Right-click on pages for quick actions
+                </div>
+            </div>
+        `;
+        
+        // Show modal with instructions
+        this.showModal('Pin Extension', instructionsHtml);
+    }
+
+    showModal(title, content) {
+        // Create modal overlay
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>${title}</h3>
+                    <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">×</button>
+                </div>
+                <div class="modal-body">${content}</div>
+                <div class="modal-footer">
+                    <button class="btn btn-primary" onclick="this.closest('.modal-overlay').remove()">Got it!</button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        // Auto-remove after delay
+        setTimeout(() => {
+            if (modal.parentNode) {
+                modal.remove();
+            }
+        }, 15000); // 15 seconds
     }
 
     formatTimestamp(timestamp) {

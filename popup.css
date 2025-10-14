@@ -360,6 +360,20 @@ body {
     padding: 12px;
     margin-bottom: 8px;
     border-left: 4px solid var(--primary-color);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.step-item:hover {
+    background: var(--bg-tertiary);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.step-item.selected {
+    border-left-color: var(--accent-color);
+    background: linear-gradient(45deg, var(--bg-secondary), var(--bg-tertiary));
+    box-shadow: 0 0 8px rgba(79, 130, 202, 0.3);
 }
 
 .step-item.pass {
@@ -427,6 +441,201 @@ body {
     font-size: 11px;
     color: var(--text-muted);
     margin-top: 4px;
+}
+
+.step-selected {
+    color: var(--primary-color);
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.step-actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border-color);
+}
+
+.btn-mini {
+    padding: 4px 8px;
+    font-size: 10px;
+    border-radius: 4px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-mini:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.btn-mini.btn-success {
+    background: #10b981;
+    color: white;
+    border-color: #059669;
+}
+
+.btn-mini.btn-success:hover {
+    background: #059669;
+}
+
+.btn-mini.btn-danger {
+    background: #ef4444;
+    color: white;
+    border-color: #dc2626;
+}
+
+.btn-mini.btn-danger:hover {
+    background: #dc2626;
+}
+
+.btn-mini.btn-outline {
+    background: transparent;
+    color: var(--text-secondary);
+}
+
+.btn-mini.btn-outline:hover {
+    background: var(--bg-secondary);
+    color: var(--primary-color);
+}
+
+/* Modal Styles */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(4px);
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.3s ease;
+}
+
+.modal-content {
+    background: var(--bg-primary);
+    border-radius: var(--border-radius);
+    max-width: 400px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: var(--shadow-lg);
+    border: 1px solid var(--border-color);
+    animation: slideIn 0.3s ease;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border-color);
+    background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+    color: white;
+    border-radius: var(--border-radius) var(--border-radius) 0 0;
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: 16px;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 20px;
+    cursor: pointer;
+    padding: 0;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background 0.2s ease;
+}
+
+.modal-close:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.modal-body {
+    padding: 20px;
+}
+
+.modal-footer {
+    padding: 16px 20px;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    justify-content: flex-end;
+}
+
+.pin-instructions {
+    color: var(--text-primary);
+}
+
+.pin-instructions h4 {
+    margin: 0 0 16px 0;
+    color: var(--primary-color);
+}
+
+.instruction-item {
+    margin-bottom: 12px;
+    line-height: 1.4;
+}
+
+.instruction-item:last-child {
+    margin-bottom: 0;
+}
+
+.instruction-item strong {
+    color: var(--text-primary);
+    display: block;
+    margin-bottom: 4px;
+}
+
+.instruction-item ul {
+    margin: 4px 0 0 16px;
+    padding: 0;
+}
+
+.instruction-item li {
+    margin-bottom: 2px;
+    color: var(--text-secondary);
+}
+
+.instruction-item kbd {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 3px;
+    padding: 2px 6px;
+    font-size: 10px;
+    font-family: monospace;
+    color: var(--text-primary);
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideIn {
+    from { 
+        opacity: 0;
+        transform: translateY(-20px) scale(0.95);
+    }
+    to { 
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
 }
 
 /* Script Tab Styles */
