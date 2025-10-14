@@ -32,8 +32,6 @@ class TestingAssistant {
         // Action buttons
         document.getElementById('takeScreenshot').addEventListener('click', () => this.takeScreenshot());
         document.getElementById('addStep').addEventListener('click', () => this.showStepInput());
-        document.getElementById('markPass').addEventListener('click', () => this.markCurrentStep('pass'));
-        document.getElementById('markFail').addEventListener('click', () => this.markCurrentStep('fail'));
 
         // Step input
         document.getElementById('saveStep').addEventListener('click', () => this.saveStep());
@@ -175,13 +173,19 @@ class TestingAssistant {
         try {
             // Check if we're in a Chrome extension environment
             if (!chrome || !chrome.tabs) {
-                this.showNotification('Screenshot capture requires Chrome extension environment', 'warning');
+                this.showNotification('Screenshots only work from the main extension popup. Please open from Chrome toolbar.', 'warning');
+                return;
+            }
+
+            // Additional check for extension context
+            if (!chrome.runtime || !chrome.runtime.getManifest) {
+                this.showNotification('Screenshots only work from the main extension popup. Please open from Chrome toolbar.', 'warning');
                 return;
             }
 
             const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
             if (tabs.length === 0) {
-                this.showNotification('No active tab found', 'error');
+                this.showNotification('No active tab found for screenshot', 'error');
                 return;
             }
             
@@ -222,11 +226,11 @@ class TestingAssistant {
             
             // Provide more helpful error messages
             if (error.message.includes('activeTab')) {
-                this.showNotification('Screenshot permission denied. Please ensure the extension has activeTab permission.', 'error');
+                this.showNotification('Screenshot permission denied. Please open from main extension popup in Chrome toolbar.', 'error');
             } else if (error.message.includes('tabs')) {
-                this.showNotification('Tab access denied. Please reload the extension and try again.', 'error');
+                this.showNotification('Screenshots only work from the main extension popup. Please open from Chrome toolbar.', 'error');
             } else {
-                this.showNotification('Screenshot capture failed. Try reloading the page and extension.', 'error');
+                this.showNotification('Screenshots only work from the main extension popup. Please open from Chrome toolbar.', 'warning');
             }
         }
     }
@@ -260,66 +264,6 @@ class TestingAssistant {
         this.saveData();
     }
 
-    markCurrentStep(status) {
-        if (this.testSteps.length === 0) {
-            this.showNotification('No steps to mark. Add a step first.', 'warning');
-            return;
-        }
-
-        let targetStep;
-        let stepIndex;
-
-        // If a step is selected, use that one
-        if (this.selectedStepIndex !== null && this.selectedStepIndex < this.testSteps.length) {
-            targetStep = this.testSteps[this.selectedStepIndex];
-            stepIndex = this.selectedStepIndex;
-            
-            const previousStatus = targetStep.status;
-            targetStep.status = status;
-            this.updateStepsList();
-            this.saveData();
-            
-            if (previousStatus === status) {
-                this.showNotification(`Step ${stepIndex + 1} is already marked as ${status}`, 'warning');
-            } else {
-                this.showNotification(`Step ${stepIndex + 1} changed from ${previousStatus} to ${status}`, 'success');
-            }
-            
-        } else {
-            // Find the first pending or in-progress step, or use the last step
-            targetStep = this.testSteps.find(step => step.status === 'pending' || step.status === 'in-progress');
-            if (!targetStep) {
-                // If no pending/in-progress steps, auto-select the last step
-                targetStep = this.testSteps[this.testSteps.length - 1];
-                stepIndex = this.testSteps.length - 1;
-                this.selectedStepIndex = stepIndex;
-                this.showNotification(`Auto-selected Step ${stepIndex + 1}. Click again to mark as ${status}.`, 'info');
-                this.updateStepsList();
-                return;
-            }
-            stepIndex = this.testSteps.indexOf(targetStep);
-            
-            const previousStatus = targetStep.status;
-            targetStep.status = status;
-            this.updateStepsList();
-            this.saveData();
-            
-            this.showNotification(`Step ${stepIndex + 1} marked as ${status} (was ${previousStatus})`, 'success');
-        }
-    }
-
-    selectStep(index) {
-        // If clicking the same step that's already selected, deselect it
-        if (this.selectedStepIndex === index) {
-            this.selectedStepIndex = null;
-            this.showNotification(`Step ${index + 1} deselected`, 'info');
-        } else {
-            this.selectedStepIndex = index;
-            this.showNotification(`Step ${index + 1} selected for Pass/Fail actions`, 'info');
-        }
-        this.updateStepsList();
-    }
-
     markStep(index, status) {
         if (index >= 0 && index < this.testSteps.length) {
             const currentStatus = this.testSteps[index].status;
@@ -329,7 +273,7 @@ class TestingAssistant {
             
             // Provide clear feedback about the status change
             if (currentStatus === status) {
-                this.showNotification(`Step ${index + 1} is already marked as ${status}`, 'warning');
+                this.showNotification(`Step ${index + 1} is already marked as ${status}`, 'info');
             } else {
                 this.showNotification(`Step ${index + 1} changed from ${currentStatus} to ${status}`, 'success');
             }
@@ -347,34 +291,21 @@ class TestingAssistant {
             
             const stepNumber = index + 1;
             const scriptIndicator = step.fromScript ? '📋 ' : '';
-            const isSelected = this.selectedStepIndex === index;
             
             stepElement.innerHTML = `
                 <div class="step-header">
                     <span class="step-number">${scriptIndicator}Step ${stepNumber}</span>
                     <span class="step-status ${step.status}">${step.status}</span>
-                    ${isSelected ? '<span class="step-selected">🎯 Selected</span>' : ''}
                 </div>
                 <div class="step-description">${step.description}</div>
                 <div class="step-timestamp">${this.formatTimestamp(step.timestamp)}</div>
                 <div class="step-actions">
-                    <button class="btn-mini btn-success" onclick="testingAssistant.markStep(${index}, 'pass')" title="Mark this step as Pass (overrides any previous status)">✅</button>
-                    <button class="btn-mini btn-danger" onclick="testingAssistant.markStep(${index}, 'fail')" title="Mark this step as Fail (overrides any previous status)">❌</button>
-                    <button class="btn-mini btn-outline" onclick="testingAssistant.selectStep(${index})" title="${isSelected ? 'Deselect this step' : 'Select this step for main Pass/Fail buttons'}">${isSelected ? '🎯' : '👆'}</button>
+                    <button class="btn-mini btn-success" onclick="testingAssistant.markStep(${index}, 'pass')" title="Mark this step as Pass">✅ Pass</button>
+                    <button class="btn-mini btn-danger" onclick="testingAssistant.markStep(${index}, 'fail')" title="Mark this step as Fail">❌ Fail</button>
                 </div>
             `;
             
-            // Add click handler to select step
-            stepElement.addEventListener('click', (e) => {
-                if (!e.target.closest('.step-actions')) {
-                    this.selectStep(index);
-                }
-            });
-            
-            if (isSelected) {
-                stepElement.classList.add('selected');
-            }
-            
+            // Remove click handler and selected state since we're using individual buttons now
             stepsList.appendChild(stepElement);
         });
     }
@@ -523,8 +454,8 @@ class TestingAssistant {
     <div class="section">
         <h2>Session Information</h2>
         <p><strong>Session ID:</strong> ${data.session?.id || 'N/A'}</p>
-        <p><strong>Start Time:</strong> ${data.session?.startTime ? new Date(data.session.startTime).toLocaleString() : 'N/A'}</p>
-        <p><strong>End Time:</strong> ${data.session?.endTime ? new Date(data.session.endTime).toLocaleString() : 'N/A'}</p>
+        <p><strong>Start Time:</strong> ${data.session?.startTime ? this.formatTimestamp(data.session.startTime) : 'N/A'}</p>
+        <p><strong>End Time:</strong> ${data.session?.endTime ? this.formatTimestamp(data.session.endTime) : 'N/A'}</p>
         <p><strong>Status:</strong> ${data.session?.status || 'N/A'}</p>
     </div>
     
@@ -534,7 +465,7 @@ class TestingAssistant {
             <div class="step ${step.status}">
                 <h4>Step ${index + 1}: ${step.status.toUpperCase()}</h4>
                 <p>${step.description}</p>
-                ${step.timestamp ? `<div class="timestamp">${new Date(step.timestamp).toLocaleString()}</div>` : ''}
+                ${step.timestamp ? `<div class="timestamp">${this.formatTimestamp(step.timestamp)}</div>` : ''}
             </div>
         `).join('')}
     </div>
@@ -547,7 +478,7 @@ class TestingAssistant {
                 <h4>Screenshot ${index + 1}</h4>
                 <p><strong>URL:</strong> ${screenshot.url}</p>
                 <p><strong>Title:</strong> ${screenshot.title}</p>
-                <div class="timestamp">${new Date(screenshot.timestamp).toLocaleString()}</div>
+                <div class="timestamp">${this.formatTimestamp(screenshot.timestamp)}</div>
                 <img src="${screenshot.dataUrl}" class="screenshot" alt="Screenshot ${index + 1}">
             </div>
         `).join('')}
