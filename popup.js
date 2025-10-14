@@ -173,6 +173,12 @@ class TestingAssistant {
 
     async takeScreenshot() {
         try {
+            // Check if we're in a Chrome extension environment
+            if (!chrome || !chrome.tabs) {
+                this.showNotification('Screenshot capture requires Chrome extension environment', 'warning');
+                return;
+            }
+
             const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
             if (tabs.length === 0) {
                 this.showNotification('No active tab found', 'error');
@@ -185,8 +191,12 @@ class TestingAssistant {
             try {
                 await chrome.tabs.sendMessage(tab.id, { action: 'prepareScreenshot' });
             } catch (error) {
-                // Content script might not be injected yet, continue anyway
-                console.log('Content script not available:', error);
+                // Content script might not be injected yet, try to inject it
+                try {
+                    await this.injectContentScript();
+                } catch (injectError) {
+                    console.log('Content script injection failed:', injectError);
+                }
             }
             
             // Capture screenshot
@@ -205,11 +215,19 @@ class TestingAssistant {
             this.saveData();
             
             // Show success feedback
-            this.showNotification('Screenshot captured!', 'success');
+            this.showNotification('Screenshot captured successfully!', 'success');
             
         } catch (error) {
             console.error('Screenshot error:', error);
-            this.showNotification('Failed to capture screenshot', 'error');
+            
+            // Provide more helpful error messages
+            if (error.message.includes('activeTab')) {
+                this.showNotification('Screenshot permission denied. Please ensure the extension has activeTab permission.', 'error');
+            } else if (error.message.includes('tabs')) {
+                this.showNotification('Tab access denied. Please reload the extension and try again.', 'error');
+            } else {
+                this.showNotification('Screenshot capture failed. Try reloading the page and extension.', 'error');
+            }
         }
     }
 
@@ -244,7 +262,7 @@ class TestingAssistant {
 
     markCurrentStep(status) {
         if (this.testSteps.length === 0) {
-            this.showNotification('No steps to mark', 'warning');
+            this.showNotification('No steps to mark. Add a step first.', 'warning');
             return;
         }
 
@@ -255,34 +273,66 @@ class TestingAssistant {
         if (this.selectedStepIndex !== null && this.selectedStepIndex < this.testSteps.length) {
             targetStep = this.testSteps[this.selectedStepIndex];
             stepIndex = this.selectedStepIndex;
+            
+            const previousStatus = targetStep.status;
+            targetStep.status = status;
+            this.updateStepsList();
+            this.saveData();
+            
+            if (previousStatus === status) {
+                this.showNotification(`Step ${stepIndex + 1} is already marked as ${status}`, 'warning');
+            } else {
+                this.showNotification(`Step ${stepIndex + 1} changed from ${previousStatus} to ${status}`, 'success');
+            }
+            
         } else {
             // Find the first pending or in-progress step, or use the last step
             targetStep = this.testSteps.find(step => step.status === 'pending' || step.status === 'in-progress');
             if (!targetStep) {
+                // If no pending/in-progress steps, auto-select the last step
                 targetStep = this.testSteps[this.testSteps.length - 1];
+                stepIndex = this.testSteps.length - 1;
+                this.selectedStepIndex = stepIndex;
+                this.showNotification(`Auto-selected Step ${stepIndex + 1}. Click again to mark as ${status}.`, 'info');
+                this.updateStepsList();
+                return;
             }
             stepIndex = this.testSteps.indexOf(targetStep);
+            
+            const previousStatus = targetStep.status;
+            targetStep.status = status;
+            this.updateStepsList();
+            this.saveData();
+            
+            this.showNotification(`Step ${stepIndex + 1} marked as ${status} (was ${previousStatus})`, 'success');
         }
-
-        targetStep.status = status;
-        this.updateStepsList();
-        this.saveData();
-        
-        this.showNotification(`Step ${stepIndex + 1} marked as ${status}`, 'success');
     }
 
     selectStep(index) {
-        this.selectedStepIndex = index;
+        // If clicking the same step that's already selected, deselect it
+        if (this.selectedStepIndex === index) {
+            this.selectedStepIndex = null;
+            this.showNotification(`Step ${index + 1} deselected`, 'info');
+        } else {
+            this.selectedStepIndex = index;
+            this.showNotification(`Step ${index + 1} selected for Pass/Fail actions`, 'info');
+        }
         this.updateStepsList();
-        this.showNotification(`Step ${index + 1} selected`, 'info');
     }
 
     markStep(index, status) {
         if (index >= 0 && index < this.testSteps.length) {
+            const currentStatus = this.testSteps[index].status;
             this.testSteps[index].status = status;
             this.updateStepsList();
             this.saveData();
-            this.showNotification(`Step ${index + 1} marked as ${status}`, 'success');
+            
+            // Provide clear feedback about the status change
+            if (currentStatus === status) {
+                this.showNotification(`Step ${index + 1} is already marked as ${status}`, 'warning');
+            } else {
+                this.showNotification(`Step ${index + 1} changed from ${currentStatus} to ${status}`, 'success');
+            }
         }
     }
 
@@ -308,9 +358,9 @@ class TestingAssistant {
                 <div class="step-description">${step.description}</div>
                 <div class="step-timestamp">${this.formatTimestamp(step.timestamp)}</div>
                 <div class="step-actions">
-                    <button class="btn-mini btn-success" onclick="testingAssistant.markStep(${index}, 'pass')" title="Mark as Pass">✅</button>
-                    <button class="btn-mini btn-danger" onclick="testingAssistant.markStep(${index}, 'fail')" title="Mark as Fail">❌</button>
-                    <button class="btn-mini btn-outline" onclick="testingAssistant.selectStep(${index})" title="Select this step">${isSelected ? '🎯' : '👆'}</button>
+                    <button class="btn-mini btn-success" onclick="testingAssistant.markStep(${index}, 'pass')" title="Mark this step as Pass (overrides any previous status)">✅</button>
+                    <button class="btn-mini btn-danger" onclick="testingAssistant.markStep(${index}, 'fail')" title="Mark this step as Fail (overrides any previous status)">❌</button>
+                    <button class="btn-mini btn-outline" onclick="testingAssistant.selectStep(${index})" title="${isSelected ? 'Deselect this step' : 'Select this step for main Pass/Fail buttons'}">${isSelected ? '🎯' : '👆'}</button>
                 </div>
             `;
             

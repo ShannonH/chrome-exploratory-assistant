@@ -687,11 +687,39 @@ body {
     font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
     font-size: 13px;
     resize: vertical;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    line-height: 1.4;
+}
+
+.script-textarea textarea::placeholder {
+    color: var(--text-secondary);
+    opacity: 0.8;
 }
 
 .script-textarea textarea:focus {
     outline: none;
     border-color: var(--primary-color);
+    background: var(--bg-primary);
+}
+
+/* Improve modal text contrast */
+.modal-body {
+    padding: 20px;
+    color: var(--text-primary);
+    background: var(--bg-primary);
+}
+
+.modal-body p {
+    color: var(--text-primary);
+    margin-bottom: 16px;
+    line-height: 1.5;
+}
+
+.upload-area p {
+    color: var(--text-primary);
+    font-weight: 500;
+    margin: 8px 0 0 0;
 }
 
 .script-actions {
