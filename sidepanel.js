@@ -272,10 +272,17 @@ class SidePanelTestingAssistant {
                 <div class="step-description">${step.description}</div>
                 <div class="step-timestamp">${this.formatTimestamp(step.timestamp)}</div>
                 <div class="step-actions">
-                    <button class="btn-mini btn-success" onclick="sidePanelTestingAssistant.markStep(${index}, 'pass')" title="Mark this step as Pass">✅ Pass</button>
-                    <button class="btn-mini btn-danger" onclick="sidePanelTestingAssistant.markStep(${index}, 'fail')" title="Mark this step as Fail">❌ Fail</button>
+                    <button class="btn-mini btn-success step-pass-btn" data-index="${index}" title="Mark this step as Pass">✅ Pass</button>
+                    <button class="btn-mini btn-danger step-fail-btn" data-index="${index}" title="Mark this step as Fail">❌ Fail</button>
                 </div>
             `;
+            
+            // Add event listeners for step buttons using event delegation
+            const passBtn = stepElement.querySelector('.step-pass-btn');
+            const failBtn = stepElement.querySelector('.step-fail-btn');
+            
+            passBtn.addEventListener('click', () => this.markStep(index, 'pass'));
+            failBtn.addEventListener('click', () => this.markStep(index, 'fail'));
             
             stepsList.appendChild(stepElement);
         });
