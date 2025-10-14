@@ -549,6 +549,54 @@ body {
     border-radius: 2px;
 }
 
+/* Mini Button Styles for Step Actions */
+.btn-mini {
+    padding: 6px 10px;
+    font-size: 11px;
+    border-radius: 4px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-weight: 500;
+}
+
+.btn-mini:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.btn-mini.btn-success {
+    background: #10b981;
+    color: white;
+    border-color: #059669;
+}
+
+.btn-mini.btn-success:hover {
+    background: #059669;
+}
+
+.btn-mini.btn-danger {
+    background: #ef4444;
+    color: white;
+    border-color: #dc2626;
+}
+
+.btn-mini.btn-danger:hover {
+    background: #dc2626;
+}
+
+.btn-mini.btn-outline {
+    background: transparent;
+    color: var(--text-secondary);
+}
+
+.btn-mini.btn-outline:hover {
+    background: var(--bg-secondary);
+    color: var(--primary-color);
+}
+
 ::-webkit-scrollbar-thumb:hover {
     background: var(--text-muted);
 }

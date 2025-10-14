@@ -11,6 +11,13 @@ class TestingAssistant {
         
         this.initializeUI();
         this.loadSavedData();
+        
+        // Listen for storage changes to sync between popup and sidepanel
+        chrome.storage.onChanged.addListener((changes, namespace) => {
+            if (namespace === 'local') {
+                this.handleStorageChange(changes);
+            }
+        });
     }
 
     initializeUI() {
@@ -792,6 +799,31 @@ class TestingAssistant {
             }
         } catch (error) {
             console.error('Failed to load saved data:', error);
+        }
+    }
+
+    handleStorageChange(changes) {
+        // Sync data changes between popup and sidepanel
+        let shouldUpdate = false;
+
+        if (changes.testSteps) {
+            this.testSteps = changes.testSteps.newValue || [];
+            shouldUpdate = true;
+        }
+        
+        if (changes.screenshots) {
+            this.screenshots = changes.screenshots.newValue || [];
+            shouldUpdate = true;
+        }
+        
+        if (changes.currentSession) {
+            this.currentSession = changes.currentSession.newValue;
+            shouldUpdate = true;
+        }
+
+        if (shouldUpdate) {
+            this.updateStepsList();
+            this.updateSessionInfo();
         }
     }
 }

@@ -9,6 +9,13 @@ class SidePanelTestingAssistant {
         
         this.initializeUI();
         this.loadSavedData();
+        
+        // Listen for storage changes to sync between popup and sidepanel
+        chrome.storage.onChanged.addListener((changes, namespace) => {
+            if (namespace === 'local') {
+                this.handleStorageChange(changes);
+            }
+        });
     }
 
     initializeUI() {
@@ -230,6 +237,22 @@ class SidePanelTestingAssistant {
         this.showNotification(`Step ${stepIndex} marked as ${status}`, 'success');
     }
 
+    markStep(index, status) {
+        if (index >= 0 && index < this.testSteps.length) {
+            const currentStatus = this.testSteps[index].status;
+            this.testSteps[index].status = status;
+            this.updateStepsList();
+            this.saveData();
+            
+            // Provide clear feedback about the status change
+            if (currentStatus === status) {
+                this.showNotification(`Step ${index + 1} is already marked as ${status}`, 'info');
+            } else {
+                this.showNotification(`Step ${index + 1} changed from ${currentStatus} to ${status}`, 'success');
+            }
+        }
+    }
+
     updateStepsList() {
         const stepsList = document.getElementById('stepsList');
         stepsList.innerHTML = '';
@@ -248,6 +271,10 @@ class SidePanelTestingAssistant {
                 </div>
                 <div class="step-description">${step.description}</div>
                 <div class="step-timestamp">${this.formatTimestamp(step.timestamp)}</div>
+                <div class="step-actions">
+                    <button class="btn-mini btn-success" onclick="sidePanelTestingAssistant.markStep(${index}, 'pass')" title="Mark this step as Pass">✅ Pass</button>
+                    <button class="btn-mini btn-danger" onclick="sidePanelTestingAssistant.markStep(${index}, 'fail')" title="Mark this step as Fail">❌ Fail</button>
+                </div>
             `;
             
             stepsList.appendChild(stepElement);
@@ -619,6 +646,31 @@ class SidePanelTestingAssistant {
             }
         } catch (error) {
             console.error('Failed to load saved data:', error);
+        }
+    }
+
+    handleStorageChange(changes) {
+        // Sync data changes between popup and sidepanel
+        let shouldUpdate = false;
+
+        if (changes.testSteps) {
+            this.testSteps = changes.testSteps.newValue || [];
+            shouldUpdate = true;
+        }
+        
+        if (changes.screenshots) {
+            this.screenshots = changes.screenshots.newValue || [];
+            shouldUpdate = true;
+        }
+        
+        if (changes.currentSession) {
+            this.currentSession = changes.currentSession.newValue;
+            shouldUpdate = true;
+        }
+
+        if (shouldUpdate) {
+            this.updateStepsList();
+            this.updateExportSummary();
         }
     }
 }
