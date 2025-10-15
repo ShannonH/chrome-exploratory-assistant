@@ -48,21 +48,20 @@
         </div>
 
         <div class="action-buttons" id="actionButtons" style="display: none;">
-            <button id="takeScreenshot" class="btn btn-accent">
-                <span class="btn-icon">📸</span>
-                Screenshot
-            </button>
             <button id="addStep" class="btn btn-outline">
                 <span class="btn-icon">➕</span>
                 Add Step
             </button>
-            <button id="markPass" class="btn btn-success">
-                <span class="btn-icon">✅</span>
-                Pass
-            </button>
-            <button id="markFail" class="btn btn-danger">
-                <span class="btn-icon">❌</span>
-                Fail
+        </div>
+
+        <div class="fallback-actions" id="fallbackActions" style="display: block;">
+            <div class="info-message">
+                <span class="btn-icon">ℹ️</span>
+                Screenshots only work from the main extension popup
+            </div>
+            <button id="openMainExtension" class="btn btn-primary">
+                <span class="btn-icon">🔗</span>
+                Open Main Extension
             </button>
         </div>
 

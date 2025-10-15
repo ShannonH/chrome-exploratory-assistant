@@ -227,6 +227,25 @@ body {
     flex-shrink: 0;
 }
 
+.fallback-actions {
+    padding: 0 16px 16px;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+.info-message {
+    background: rgba(255, 193, 7, 0.1);
+    color: #856404;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 11px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
 /* Step Input */
 .step-input {
     background: var(--bg-secondary);

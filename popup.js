@@ -39,6 +39,7 @@ class TestingAssistant {
         // Action buttons
         document.getElementById('takeScreenshot').addEventListener('click', () => this.takeScreenshot());
         document.getElementById('addStep').addEventListener('click', () => this.showStepInput());
+        document.getElementById('openMainExtension').addEventListener('click', () => this.openMainExtension());
 
         // Step input
         document.getElementById('saveStep').addEventListener('click', () => this.saveStep());
@@ -179,14 +180,8 @@ class TestingAssistant {
     async takeScreenshot() {
         try {
             // Check if we're in a Chrome extension environment
-            if (!chrome || !chrome.tabs) {
-                this.showNotification('Screenshots only work from the main extension popup. Please open from Chrome toolbar.', 'warning');
-                return;
-            }
-
-            // Additional check for extension context
-            if (!chrome.runtime || !chrome.runtime.getManifest) {
-                this.showNotification('Screenshots only work from the main extension popup. Please open from Chrome toolbar.', 'warning');
+            if (!chrome || !chrome.tabs || !chrome.runtime || !chrome.runtime.getManifest) {
+                this.showFallbackActions();
                 return;
             }
 
@@ -231,14 +226,33 @@ class TestingAssistant {
         } catch (error) {
             console.error('Screenshot error:', error);
             
-            // Provide more helpful error messages
-            if (error.message.includes('activeTab')) {
-                this.showNotification('Screenshot permission denied. Please open from main extension popup in Chrome toolbar.', 'error');
-            } else if (error.message.includes('tabs')) {
-                this.showNotification('Screenshots only work from the main extension popup. Please open from Chrome toolbar.', 'error');
+            // Show fallback actions instead of just error message
+            this.showFallbackActions();
+        }
+    }
+
+    showFallbackActions() {
+        const actionButtons = document.getElementById('actionButtons');
+        const fallbackActions = document.getElementById('fallbackActions');
+        
+        if (actionButtons && fallbackActions) {
+            actionButtons.style.display = 'none';
+            fallbackActions.style.display = 'block';
+        }
+    }
+
+    async openMainExtension() {
+        try {
+            // Try to open the main extension popup
+            if (chrome && chrome.action && chrome.action.openPopup) {
+                await chrome.action.openPopup();
             } else {
-                this.showNotification('Screenshots only work from the main extension popup. Please open from Chrome toolbar.', 'warning');
+                // Fallback: show instructions
+                this.showNotification('Please click the extension icon in Chrome toolbar to access screenshot functionality.', 'info');
             }
+        } catch (error) {
+            // Fallback: show instructions
+            this.showNotification('Please click the extension icon in Chrome toolbar to access screenshot functionality.', 'info');
         }
     }
 

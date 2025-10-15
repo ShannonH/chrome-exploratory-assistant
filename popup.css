@@ -310,6 +310,24 @@ body {
     margin-bottom: 16px;
 }
 
+.fallback-actions {
+    margin-bottom: 16px;
+    text-align: center;
+}
+
+.info-message {
+    background: rgba(255, 193, 7, 0.1);
+    color: #856404;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
 /* Step Input */
 .step-input {
     background: var(--bg-secondary);

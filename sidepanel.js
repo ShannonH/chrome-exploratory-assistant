@@ -24,10 +24,8 @@ class SidePanelTestingAssistant {
         document.getElementById('endSession').addEventListener('click', () => this.endSession());
 
         // Action buttons
-        document.getElementById('takeScreenshot').addEventListener('click', () => this.takeScreenshot());
         document.getElementById('addStep').addEventListener('click', () => this.showStepInput());
-        document.getElementById('markPass').addEventListener('click', () => this.markCurrentStep('pass'));
-        document.getElementById('markFail').addEventListener('click', () => this.markCurrentStep('fail'));
+        document.getElementById('openMainExtension').addEventListener('click', () => this.openMainExtension());
 
         // Step input
         document.getElementById('saveStep').addEventListener('click', () => this.saveStep());
@@ -148,43 +146,18 @@ class SidePanelTestingAssistant {
         }[type] || '#10b981';
     }
 
-    async takeScreenshot() {
+    async openMainExtension() {
         try {
-            const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-            if (tabs.length === 0) {
-                this.showNotification('No active tab found', 'error');
-                return;
+            // Try to open the main extension popup
+            if (chrome && chrome.action && chrome.action.openPopup) {
+                await chrome.action.openPopup();
+            } else {
+                // Fallback: show instructions
+                this.showNotification('Please click the extension icon in Chrome toolbar to access screenshot functionality.', 'info');
             }
-            
-            const tab = tabs[0];
-            
-            // Send message to content script to prepare for screenshot
-            try {
-                await chrome.tabs.sendMessage(tab.id, { action: 'prepareScreenshot' });
-            } catch (error) {
-                console.log('Content script not available:', error);
-            }
-            
-            // Capture screenshot
-            const dataUrl = await chrome.tabs.captureVisibleTab(null, { format: 'png' });
-            
-            const screenshot = {
-                id: Date.now(),
-                timestamp: new Date(),
-                dataUrl: dataUrl,
-                url: tab.url,
-                title: tab.title
-            };
-
-            this.screenshots.push(screenshot);
-            this.updateSessionInfo();
-            this.saveData();
-            
-            this.showNotification('Screenshot captured!', 'success');
-            
         } catch (error) {
-            console.error('Screenshot error:', error);
-            this.showNotification('Failed to capture screenshot', 'error');
+            // Fallback: show instructions
+            this.showNotification('Please click the extension icon in Chrome toolbar to access screenshot functionality.', 'info');
         }
     }
 
