@@ -16,6 +16,83 @@ class SidePanelTestingAssistant {
                 this.handleStorageChange(changes);
             }
         });
+        
+        // Force refresh data when sidepanel becomes visible
+        this.setupVisibilityHandlers();
+    }
+
+    setupVisibilityHandlers() {
+        // Force refresh data when page becomes visible
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) {
+                // Page became visible - refresh data to ensure sync
+                setTimeout(() => {
+                    this.loadSavedData();
+                }, 100);
+            }
+        });
+        
+        // Also refresh data when window gains focus
+        window.addEventListener('focus', () => {
+            setTimeout(() => {
+                this.loadSavedData();
+            }, 100);
+        });
+        
+        // Periodic sync check (every 2 seconds when visible)
+        setInterval(() => {
+            if (!document.hidden) {
+                this.syncCheck();
+            }
+        }, 2000);
+    }
+
+    async syncCheck() {
+        try {
+            const result = await chrome.storage.local.get('testingAssistantData');
+            const data = result.testingAssistantData;
+            
+            if (data) {
+                // Check if our data is stale
+                const serverSteps = data.testSteps || [];
+                const serverSession = data.currentSession;
+                
+                if (serverSteps.length !== this.testSteps.length || 
+                    (serverSession && serverSession.status !== (this.currentSession ? this.currentSession.status : null))) {
+                    // Data is out of sync, refresh
+                    console.log('Sidepanel data out of sync, refreshing...');
+                    this.currentSession = serverSession;
+                    this.testSteps = serverSteps;
+                    this.screenshots = data.screenshots || [];
+                    
+                    this.updateStepsList();
+                    this.updateSessionInfo();
+                    
+                    // Update session UI state
+                    if (this.currentSession && this.currentSession.status === 'active') {
+                        this.sessionStartTime = new Date(this.currentSession.startTime).getTime();
+                        document.getElementById('startSession').disabled = true;
+                        document.getElementById('endSession').disabled = false;
+                        document.getElementById('testInfo').style.display = 'block';
+                        document.getElementById('actionButtons').style.display = 'block';
+                        this.updateStatus('Testing in progress', 'warning');
+                        if (!this.sessionTimer) {
+                            this.startSessionTimer();
+                        }
+                    } else {
+                        document.getElementById('startSession').disabled = false;
+                        document.getElementById('endSession').disabled = true;
+                        this.updateStatus('Ready', 'ready');
+                        if (this.sessionTimer) {
+                            clearInterval(this.sessionTimer);
+                            this.sessionTimer = null;
+                        }
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Sync check failed:', error);
+        }
     }
 
     initializeUI() {
