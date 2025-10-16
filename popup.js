@@ -378,7 +378,7 @@ class TestingAssistant {
         reader.readAsText(file);
     }
 
-    loadScript() {
+    async loadScript() {
         const scriptText = document.getElementById('scriptText').value.trim();
         if (!scriptText) {
             this.showNotification('Please enter or upload a script', 'warning');
@@ -387,7 +387,7 @@ class TestingAssistant {
 
         // Check if there's an active session, if not start one
         if (!this.currentSession || this.currentSession.status !== 'active') {
-            this.startSession();
+            await this.startSession();
         }
 
         // Parse script into test steps and add them to the main test steps

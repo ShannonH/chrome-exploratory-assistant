@@ -4,6 +4,7 @@ class SidePanelTestingAssistant {
         this.currentSession = null;
         this.sessionStartTime = null;
         this.sessionTimer = null;
+        this.syncCheckInterval = null;
         this.testSteps = [];
         this.screenshots = [];
         
@@ -16,6 +17,116 @@ class SidePanelTestingAssistant {
                 this.handleStorageChange(changes);
             }
         });
+        
+        // Force refresh data when sidepanel becomes visible
+        this.setupVisibilityHandlers();
+    }
+
+    setupVisibilityHandlers() {
+        // Constants for timing
+        const VISIBILITY_REFRESH_DELAY = 100; // ms delay before refreshing data
+        const SYNC_CHECK_INTERVAL = 2000; // ms between sync checks
+        
+        // Force refresh data when page becomes visible
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) {
+                // Page became visible - refresh data to ensure sync
+                setTimeout(() => {
+                    this.loadSavedData();
+                }, VISIBILITY_REFRESH_DELAY);
+            }
+        });
+        
+        // Also refresh data when window gains focus
+        window.addEventListener('focus', () => {
+            setTimeout(() => {
+                this.loadSavedData();
+            }, VISIBILITY_REFRESH_DELAY);
+        });
+        
+        // Periodic sync check (only when visible)
+        this.syncCheckInterval = setInterval(() => {
+            if (!document.hidden) {
+                this.syncCheck();
+            }
+        }, SYNC_CHECK_INTERVAL);
+        
+        // Cleanup interval when page is about to unload
+        window.addEventListener('beforeunload', () => {
+            if (this.syncCheckInterval) {
+                clearInterval(this.syncCheckInterval);
+                this.syncCheckInterval = null;
+            }
+        });
+    }
+
+    async syncCheck() {
+        try {
+            const result = await chrome.storage.local.get('testingAssistantData');
+            const data = result.testingAssistantData;
+            
+            if (data) {
+                // Check if our data is stale by comparing multiple factors
+                const serverSteps = data.testSteps || [];
+                const serverSession = data.currentSession;
+                
+                // Check for differences in step count, session status, or step modifications
+                const stepCountDiff = serverSteps.length !== this.testSteps.length;
+                const sessionStatusDiff = (serverSession && serverSession.status) !== (this.currentSession ? this.currentSession.status : null);
+                
+                // Check for step modifications by comparing last modification times
+                let stepModificationDiff = false;
+                if (serverSteps.length === this.testSteps.length && serverSteps.length > 0) {
+                    // Compare step statuses and timestamps to detect modifications
+                    for (let i = 0; i < serverSteps.length; i++) {
+                        if (serverSteps[i].status !== this.testSteps[i].status ||
+                            serverSteps[i].id !== this.testSteps[i].id) {
+                            stepModificationDiff = true;
+                            break;
+                        }
+                    }
+                }
+                
+                if (stepCountDiff || sessionStatusDiff || stepModificationDiff) {
+                    // Data is out of sync, refresh
+                    console.log('Sidepanel data out of sync, refreshing...', {
+                        stepCountDiff,
+                        sessionStatusDiff,
+                        stepModificationDiff
+                    });
+                    
+                    this.currentSession = serverSession;
+                    this.testSteps = serverSteps;
+                    this.screenshots = data.screenshots || [];
+                    
+                    this.updateStepsList();
+                    this.updateSessionInfo();
+                    
+                    // Update session UI state
+                    if (this.currentSession && this.currentSession.status === 'active') {
+                        this.sessionStartTime = new Date(this.currentSession.startTime).getTime();
+                        document.getElementById('startSession').disabled = true;
+                        document.getElementById('endSession').disabled = false;
+                        document.getElementById('testInfo').style.display = 'block';
+                        document.getElementById('actionButtons').style.display = 'block';
+                        this.updateStatus('Testing in progress', 'warning');
+                        if (!this.sessionTimer) {
+                            this.startSessionTimer();
+                        }
+                    } else {
+                        document.getElementById('startSession').disabled = false;
+                        document.getElementById('endSession').disabled = true;
+                        this.updateStatus('Ready', 'ready');
+                        if (this.sessionTimer) {
+                            clearInterval(this.sessionTimer);
+                            this.sessionTimer = null;
+                        }
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Sync check failed:', error);
+        }
     }
 
     initializeUI() {
@@ -41,7 +152,6 @@ class SidePanelTestingAssistant {
                 this.markStep(stepIndex, 'fail');
             }
         });
-    }
     }
 
     async startSession() {
@@ -259,70 +369,6 @@ class SidePanelTestingAssistant {
     // Script and export functionality is handled in the main extension popup
 
     formatTimestamp(timestamp) {
-            <div>
-                <h4>Screenshot ${index + 1}</h4>
-                <p><strong>URL:</strong> ${screenshot.url}</p>
-                <p><strong>Title:</strong> ${screenshot.title}</p>
-                <div class="timestamp">${new Date(screenshot.timestamp).toLocaleString()}</div>
-                <img src="${screenshot.dataUrl}" class="screenshot" alt="Screenshot ${index + 1}">
-            </div>
-        `).join('')}
-    </div>
-    ` : ''}
-</body>
-</html>
-        `;
-    }
-
-    downloadBlob(blob, filename) {
-        try {
-            chrome.downloads.download({
-                url: URL.createObjectURL(blob),
-                filename: filename,
-                saveAs: true
-            }, (downloadId) => {
-                if (chrome.runtime.lastError) {
-                    console.error('Download failed:', chrome.runtime.lastError);
-                    this.showNotification('Download failed', 'error');
-                } else {
-                    this.showNotification('File downloaded successfully', 'success');
-                }
-            });
-        } catch (error) {
-            console.error('Download error:', error);
-            this.showNotification('Download failed', 'error');
-        }
-    }
-
-    // Script and export functionality is handled in the main extension popup
-
-    showNotification(message, type = 'info') {
-        // Create a temporary notification element
-        const notification = document.createElement('div');
-        notification.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 12px 16px;
-            background: ${type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#6366f1'};
-            color: white;
-            border-radius: 8px;
-            z-index: 10000;
-            font-size: 12px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            animation: slideIn 0.3s ease-out;
-            max-width: 280px;
-        `;
-        notification.textContent = message;
-        
-        document.body.appendChild(notification);
-        
-        setTimeout(() => {
-            notification.remove();
-        }, 3000);
-    }
-
-    formatTimestamp(timestamp) {
         try {
             let date;
             
@@ -404,6 +450,7 @@ class SidePanelTestingAssistant {
     handleStorageChange(changes) {
         // Sync data changes between popup and sidepanel
         let shouldUpdate = false;
+        let shouldUpdateUI = false;
 
         if (changes.testingAssistantData && changes.testingAssistantData.newValue) {
             const newData = changes.testingAssistantData.newValue;
@@ -419,24 +466,55 @@ class SidePanelTestingAssistant {
             }
             
             if (newData.currentSession) {
+                const previousSessionStatus = this.currentSession ? this.currentSession.status : null;
                 this.currentSession = newData.currentSession;
                 
-                // Update session timer if session status changed
+                // Update session UI state if session status changed
                 if (this.currentSession && this.currentSession.status === 'active' && this.currentSession.startTime) {
                     this.sessionStartTime = new Date(this.currentSession.startTime).getTime();
+                    
+                    // Update UI to reflect active session
+                    document.getElementById('startSession').disabled = true;
+                    document.getElementById('endSession').disabled = false;
+                    document.getElementById('testInfo').style.display = 'block';
+                    document.getElementById('actionButtons').style.display = 'block';
+                    this.updateStatus('Testing in progress', 'warning');
+                    
                     if (!this.sessionTimer) {
                         this.startSessionTimer();
                     }
-                } else if (this.sessionTimer) {
-                    clearInterval(this.sessionTimer);
-                    this.sessionTimer = null;
+                    shouldUpdateUI = true;
+                } else if (this.currentSession && this.currentSession.status === 'completed') {
+                    // Handle session completion
+                    if (this.sessionTimer) {
+                        clearInterval(this.sessionTimer);
+                        this.sessionTimer = null;
+                    }
+                    
+                    // Update UI to reflect completed session
+                    document.getElementById('startSession').disabled = false;
+                    document.getElementById('endSession').disabled = true;
+                    document.getElementById('actionButtons').style.display = 'none';
+                    this.updateStatus('Session completed', 'success');
+                    shouldUpdateUI = true;
+                } else {
+                    // No active session
+                    if (this.sessionTimer) {
+                        clearInterval(this.sessionTimer);
+                        this.sessionTimer = null;
+                    }
+                    
+                    document.getElementById('startSession').disabled = false;
+                    document.getElementById('endSession').disabled = true;
+                    this.updateStatus('Ready', 'ready');
+                    shouldUpdateUI = true;
                 }
                 
                 shouldUpdate = true;
             }
         }
 
-        if (shouldUpdate) {
+        if (shouldUpdate || shouldUpdateUI) {
             this.updateStepsList();
             this.updateSessionInfo();
         }
