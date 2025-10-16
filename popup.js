@@ -276,12 +276,16 @@ class TestingAssistant {
         const description = document.getElementById('stepDescription').value.trim();
         if (!description) return;
 
+        // Stop any previous click tracking and start new tracking for this step
+        this.startClickTrackingForStep();
+
         const step = {
             id: Date.now(),
             timestamp: new Date(),
             description: description,
             status: 'in-progress',
-            screenshots: []
+            screenshots: [],
+            clickPath: [] // Will be populated when step is marked as failed
         };
 
         this.testSteps.push(step);
@@ -295,6 +299,12 @@ class TestingAssistant {
         if (index >= 0 && index < this.testSteps.length) {
             const currentStatus = this.testSteps[index].status;
             this.testSteps[index].status = status;
+            
+            // If marking as failed, capture click path and generate bug report
+            if (status === 'fail') {
+                this.captureClickPathForFailedStep(index);
+            }
+            
             this.updateStepsList();
             this.saveData();
             
@@ -329,19 +339,76 @@ class TestingAssistant {
                 <div class="step-actions">
                     <button class="btn-mini btn-success step-pass-btn" data-index="${index}" title="Mark this step as Pass">✅ Pass</button>
                     <button class="btn-mini btn-danger step-fail-btn" data-index="${index}" title="Mark this step as Fail">❌ Fail</button>
+                    ${step.status === 'fail' && step.bugReport ? `
+                        <button class="btn-mini btn-warning step-bug-report-btn" data-index="${index}" title="Copy bug report for ADO ticket">🐛 Bug Report</button>
+                    ` : ''}
                 </div>
             `;
             
             // Add event listeners for step buttons using event delegation
             const passBtn = stepElement.querySelector('.step-pass-btn');
             const failBtn = stepElement.querySelector('.step-fail-btn');
+            const bugReportBtn = stepElement.querySelector('.step-bug-report-btn');
             
             passBtn.addEventListener('click', () => this.markStep(index, 'pass'));
             failBtn.addEventListener('click', () => this.markStep(index, 'fail'));
             
+            if (bugReportBtn) {
+                bugReportBtn.addEventListener('click', () => this.showBugReportModal(index));
+            }
+            
             // Remove click handler and selected state since we're using individual buttons now
             stepsList.appendChild(stepElement);
         });
+    }
+
+    async startClickTrackingForStep() {
+        try {
+            const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+            await chrome.tabs.sendMessage(tab.id, { action: 'startClickTracking' });
+            console.log('Started click tracking for new step');
+        } catch (error) {
+            console.error('Failed to start click tracking:', error);
+        }
+    }
+
+    async captureClickPathForFailedStep(stepIndex) {
+        try {
+            const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+            const response = await chrome.tabs.sendMessage(tab.id, { action: 'stopClickTracking' });
+            
+            if (response && response.clickPath) {
+                this.testSteps[stepIndex].clickPath = response.clickPath;
+                this.testSteps[stepIndex].bugReport = this.generateBugReport(this.testSteps[stepIndex]);
+                console.log('Captured click path for failed step:', response.clickPath);
+            }
+        } catch (error) {
+            console.error('Failed to capture click path:', error);
+        }
+    }
+
+    generateBugReport(step) {
+        const stepName = step.description;
+        const clickPath = step.clickPath || [];
+        
+        let stepsToReproduce = '';
+        if (clickPath.length > 0) {
+            stepsToReproduce = clickPath.map((click, index) => {
+                return `${index + 1}. Click on "${click.elementText}" (${click.elementType}) at ${click.url}`;
+            }).join('\n');
+        } else {
+            stepsToReproduce = 'No click path captured for this step';
+        }
+
+        return `Issue: Bug encountered during ${stepName}
+
+Steps to reproduce:
+${stepsToReproduce}
+
+Additional Information:
+- Step Status: Failed
+- Timestamp: ${this.formatTimestamp(step.timestamp)}
+- Session ID: ${this.currentSession?.id || 'N/A'}`;
     }
 
     async injectContentScript() {
@@ -477,6 +544,42 @@ class TestingAssistant {
         .step.fail { border-left-color: #ef4444; }
         .screenshot { max-width: 100%; height: auto; border: 1px solid #ddd; margin: 10px 0; }
         .timestamp { color: #666; font-size: 0.9em; }
+        .bug-report-section { 
+            margin-top: 15px; 
+            padding: 15px; 
+            background: #fef2f2; 
+            border-radius: 8px;
+            border-left: 4px solid #ef4444;
+        }
+        .bug-report-section h5 { 
+            color: #ef4444; 
+            margin-bottom: 10px; 
+            font-size: 14px;
+        }
+        .bug-report-text { 
+            width: 100%; 
+            height: 150px; 
+            font-family: monospace; 
+            font-size: 12px; 
+            padding: 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            background: white;
+            resize: vertical;
+            margin-bottom: 10px;
+        }
+        .copy-bug-report-btn {
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .copy-bug-report-btn:hover {
+            background: #dc2626;
+        }
     </style>
 </head>
 <body>
@@ -500,6 +603,15 @@ class TestingAssistant {
                 <h4>Step ${index + 1}: ${step.status.toUpperCase()}</h4>
                 <p>${step.description}</p>
                 ${step.timestamp ? `<div class="timestamp">${this.formatTimestamp(step.timestamp)}</div>` : ''}
+                ${step.status === 'fail' && step.bugReport ? `
+                    <div class="bug-report-section">
+                        <h5>🐛 Bug Report for ADO Ticket</h5>
+                        <div class="bug-report-content">
+                            <textarea readonly class="bug-report-text">${step.bugReport}</textarea>
+                            <button class="copy-bug-report-btn" onclick="navigator.clipboard.writeText(this.previousElementSibling.value).then(() => alert('Bug report copied to clipboard!'))">📋 Copy Bug Report</button>
+                        </div>
+                    </div>
+                ` : ''}
             </div>
         `).join('')}
     </div>
@@ -705,6 +817,38 @@ class TestingAssistant {
         
         // Show modal with instructions
         this.showModal('Pin Extension', instructionsHtml);
+    }
+
+    showBugReportModal(stepIndex) {
+        const step = this.testSteps[stepIndex];
+        if (!step || !step.bugReport) {
+            this.showNotification('No bug report available for this step', 'warning');
+            return;
+        }
+
+        const modalContent = `
+            <div class="bug-report-modal">
+                <h4>🐛 Bug Report for Step ${stepIndex + 1}</h4>
+                <div class="bug-report-content">
+                    <label for="bugReportText">Copy this text to your ADO ticket description:</label>
+                    <textarea id="bugReportText" readonly>${step.bugReport}</textarea>
+                    <div class="bug-report-actions">
+                        <button class="btn btn-primary" onclick="navigator.clipboard.writeText(document.getElementById('bugReportText').value).then(() => testingAssistant.showNotification('Bug report copied to clipboard!', 'success'))">📋 Copy to Clipboard</button>
+                        <button class="btn btn-secondary" onclick="this.closest('.modal-overlay').remove()">Close</button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        this.showModal('Bug Report', modalContent);
+        
+        // Auto-select the text for easy copying
+        setTimeout(() => {
+            const textarea = document.getElementById('bugReportText');
+            if (textarea) {
+                textarea.select();
+            }
+        }, 100);
     }
 
     showModal(title, content) {

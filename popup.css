@@ -955,3 +955,64 @@ body {
         flex-direction: column;
     }
 }
+
+/* Bug Report Modal Styles */
+.bug-report-modal {
+    max-width: 500px;
+    width: 100%;
+}
+
+.bug-report-modal h4 {
+    color: var(--danger-color);
+    margin-bottom: 16px;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.bug-report-content label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: var(--text-primary);
+    font-size: 14px;
+}
+
+.bug-report-content textarea {
+    width: 100%;
+    height: 200px;
+    padding: 12px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    font-family: monospace;
+    font-size: 12px;
+    line-height: 1.4;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    resize: vertical;
+    margin-bottom: 16px;
+}
+
+.bug-report-content textarea:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    background: var(--bg-primary);
+}
+
+.bug-report-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+}
+
+.btn-warning {
+    background: var(--warning-color);
+    color: white;
+    border: 1px solid var(--warning-color);
+}
+
+.btn-warning:hover {
+    background: #d97706;
+    border-color: #d97706;
+}

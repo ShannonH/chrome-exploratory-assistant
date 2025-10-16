@@ -4,6 +4,8 @@ class ContentScriptHandler {
         this.isInjected = false;
         this.overlay = null;
         this.screenshotMode = false;
+        this.currentStepClickPath = [];
+        this.isTrackingClicks = false;
         this.setupMessageListener();
         this.injectStyles();
         console.log('Exploratory Testing Assistant content script loaded');
@@ -47,6 +49,20 @@ class ContentScriptHandler {
                 case 'injectAnnotationTool':
                     this.injectAnnotationTool();
                     sendResponse({ success: true });
+                    break;
+
+                case 'startClickTracking':
+                    this.startClickTracking();
+                    sendResponse({ success: true });
+                    break;
+
+                case 'stopClickTracking':
+                    const clickPath = this.stopClickTracking();
+                    sendResponse({ success: true, clickPath: clickPath });
+                    break;
+
+                case 'getClickPath':
+                    sendResponse({ success: true, clickPath: this.currentStepClickPath });
                     break;
 
                 default:
@@ -442,7 +458,58 @@ class ContentScriptHandler {
         });
     }
 
+    startClickTracking() {
+        this.isTrackingClicks = true;
+        this.currentStepClickPath = [];
+        console.log('Started click tracking for current step');
+    }
+
+    stopClickTracking() {
+        this.isTrackingClicks = false;
+        const clickPath = [...this.currentStepClickPath];
+        this.currentStepClickPath = [];
+        console.log('Stopped click tracking, captured path:', clickPath);
+        return clickPath;
+    }
+
+    recordClick(element) {
+        if (!this.isTrackingClicks) return;
+
+        const clickInfo = {
+            timestamp: new Date().toISOString(),
+            elementType: element.tagName.toLowerCase(),
+            elementText: this.getElementText(element),
+            selector: this.getElementSelector(element),
+            url: window.location.href,
+            pageTitle: document.title
+        };
+
+        this.currentStepClickPath.push(clickInfo);
+        console.log('Recorded click:', clickInfo);
+    }
+
+    getElementText(element) {
+        // Get meaningful text from the element
+        if (element.textContent && element.textContent.trim()) {
+            return element.textContent.trim().substring(0, 50);
+        } else if (element.value) {
+            return `[Input: ${element.value.substring(0, 20)}]`;
+        } else if (element.placeholder) {
+            return `[Placeholder: ${element.placeholder.substring(0, 20)}]`;
+        } else if (element.alt) {
+            return `[Alt: ${element.alt.substring(0, 20)}]`;
+        } else if (element.title) {
+            return `[Title: ${element.title.substring(0, 20)}]`;
+        }
+        return `[${element.tagName.toLowerCase()}]`;
+    }
+
     handleInteraction(event) {
+        // Record click if tracking is enabled
+        if (event.type === 'click' && this.isTrackingClicks) {
+            this.recordClick(event.target);
+        }
+
         // This could be used to automatically suggest test steps based on user interactions
         const element = event.target;
         const selector = this.getElementSelector(element);
