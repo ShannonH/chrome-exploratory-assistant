@@ -42,7 +42,6 @@ class SidePanelTestingAssistant {
             }
         });
     }
-    }
 
     async startSession() {
         this.currentSession = {
@@ -259,70 +258,6 @@ class SidePanelTestingAssistant {
     // Script and export functionality is handled in the main extension popup
 
     formatTimestamp(timestamp) {
-            <div>
-                <h4>Screenshot ${index + 1}</h4>
-                <p><strong>URL:</strong> ${screenshot.url}</p>
-                <p><strong>Title:</strong> ${screenshot.title}</p>
-                <div class="timestamp">${new Date(screenshot.timestamp).toLocaleString()}</div>
-                <img src="${screenshot.dataUrl}" class="screenshot" alt="Screenshot ${index + 1}">
-            </div>
-        `).join('')}
-    </div>
-    ` : ''}
-</body>
-</html>
-        `;
-    }
-
-    downloadBlob(blob, filename) {
-        try {
-            chrome.downloads.download({
-                url: URL.createObjectURL(blob),
-                filename: filename,
-                saveAs: true
-            }, (downloadId) => {
-                if (chrome.runtime.lastError) {
-                    console.error('Download failed:', chrome.runtime.lastError);
-                    this.showNotification('Download failed', 'error');
-                } else {
-                    this.showNotification('File downloaded successfully', 'success');
-                }
-            });
-        } catch (error) {
-            console.error('Download error:', error);
-            this.showNotification('Download failed', 'error');
-        }
-    }
-
-    // Script and export functionality is handled in the main extension popup
-
-    showNotification(message, type = 'info') {
-        // Create a temporary notification element
-        const notification = document.createElement('div');
-        notification.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 12px 16px;
-            background: ${type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#6366f1'};
-            color: white;
-            border-radius: 8px;
-            z-index: 10000;
-            font-size: 12px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            animation: slideIn 0.3s ease-out;
-            max-width: 280px;
-        `;
-        notification.textContent = message;
-        
-        document.body.appendChild(notification);
-        
-        setTimeout(() => {
-            notification.remove();
-        }, 3000);
-    }
-
-    formatTimestamp(timestamp) {
         try {
             let date;
             
@@ -404,6 +339,7 @@ class SidePanelTestingAssistant {
     handleStorageChange(changes) {
         // Sync data changes between popup and sidepanel
         let shouldUpdate = false;
+        let shouldUpdateUI = false;
 
         if (changes.testingAssistantData && changes.testingAssistantData.newValue) {
             const newData = changes.testingAssistantData.newValue;
@@ -419,24 +355,55 @@ class SidePanelTestingAssistant {
             }
             
             if (newData.currentSession) {
+                const previousSessionStatus = this.currentSession ? this.currentSession.status : null;
                 this.currentSession = newData.currentSession;
                 
-                // Update session timer if session status changed
+                // Update session UI state if session status changed
                 if (this.currentSession && this.currentSession.status === 'active' && this.currentSession.startTime) {
                     this.sessionStartTime = new Date(this.currentSession.startTime).getTime();
+                    
+                    // Update UI to reflect active session
+                    document.getElementById('startSession').disabled = true;
+                    document.getElementById('endSession').disabled = false;
+                    document.getElementById('testInfo').style.display = 'block';
+                    document.getElementById('actionButtons').style.display = 'block';
+                    this.updateStatus('Testing in progress', 'warning');
+                    
                     if (!this.sessionTimer) {
                         this.startSessionTimer();
                     }
-                } else if (this.sessionTimer) {
-                    clearInterval(this.sessionTimer);
-                    this.sessionTimer = null;
+                    shouldUpdateUI = true;
+                } else if (this.currentSession && this.currentSession.status === 'completed') {
+                    // Handle session completion
+                    if (this.sessionTimer) {
+                        clearInterval(this.sessionTimer);
+                        this.sessionTimer = null;
+                    }
+                    
+                    // Update UI to reflect completed session
+                    document.getElementById('startSession').disabled = false;
+                    document.getElementById('endSession').disabled = true;
+                    document.getElementById('actionButtons').style.display = 'none';
+                    this.updateStatus('Session completed', 'success');
+                    shouldUpdateUI = true;
+                } else {
+                    // No active session
+                    if (this.sessionTimer) {
+                        clearInterval(this.sessionTimer);
+                        this.sessionTimer = null;
+                    }
+                    
+                    document.getElementById('startSession').disabled = false;
+                    document.getElementById('endSession').disabled = true;
+                    this.updateStatus('Ready', 'ready');
+                    shouldUpdateUI = true;
                 }
                 
                 shouldUpdate = true;
             }
         }
 
-        if (shouldUpdate) {
+        if (shouldUpdate || shouldUpdateUI) {
             this.updateStepsList();
             this.updateSessionInfo();
         }
