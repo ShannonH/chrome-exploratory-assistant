@@ -31,23 +31,17 @@ class SidePanelTestingAssistant {
         document.getElementById('saveStep').addEventListener('click', () => this.saveStep());
         document.getElementById('cancelStep').addEventListener('click', () => this.hideStepInput());
 
-        // Modal controls
-        document.getElementById('loadScript').addEventListener('click', () => this.showScriptModal());
-        document.getElementById('exportData').addEventListener('click', () => this.showExportModal());
-
-        // Script modal
-        document.getElementById('closeScriptModal').addEventListener('click', () => this.hideScriptModal());
-        document.getElementById('uploadArea').addEventListener('click', () => {
-            document.getElementById('fileInput').click();
+        // Add event delegation for step action buttons
+        document.getElementById('stepsList').addEventListener('click', (e) => {
+            if (e.target.classList.contains('btn-pass') || e.target.closest('.btn-pass')) {
+                const stepIndex = parseInt(e.target.dataset.stepIndex || e.target.closest('.btn-pass').dataset.stepIndex);
+                this.markStep(stepIndex, 'pass');
+            } else if (e.target.classList.contains('btn-fail') || e.target.closest('.btn-fail')) {
+                const stepIndex = parseInt(e.target.dataset.stepIndex || e.target.closest('.btn-fail').dataset.stepIndex);
+                this.markStep(stepIndex, 'fail');
+            }
         });
-        document.getElementById('fileInput').addEventListener('change', (e) => this.handleFileUpload(e));
-        document.getElementById('loadScriptBtn').addEventListener('click', () => this.loadScript());
-        document.getElementById('clearScript').addEventListener('click', () => this.clearScript());
-
-        // Export modal
-        document.getElementById('closeExportModal').addEventListener('click', () => this.hideExportModal());
-        document.getElementById('exportDataBtn').addEventListener('click', () => this.exportData());
-        document.getElementById('clearData').addEventListener('click', () => this.clearAllData());
+    }
 
         // Drag and drop for script upload
         const uploadArea = document.getElementById('uploadArea');
@@ -236,6 +230,11 @@ class SidePanelTestingAssistant {
         const stepsList = document.getElementById('stepsList');
         stepsList.innerHTML = '';
 
+        if (this.testSteps.length === 0) {
+            stepsList.innerHTML = '<div class="no-steps">No test steps yet. Start a session and add some steps!</div>';
+            return;
+        }
+
         this.testSteps.forEach((step, index) => {
             const stepElement = document.createElement('div');
             stepElement.className = `step-item ${step.status} fade-in`;
@@ -251,17 +250,10 @@ class SidePanelTestingAssistant {
                 <div class="step-description">${step.description}</div>
                 <div class="step-timestamp">${this.formatTimestamp(step.timestamp)}</div>
                 <div class="step-actions">
-                    <button class="btn-mini btn-success step-pass-btn" data-index="${index}" title="Mark this step as Pass">✅ Pass</button>
-                    <button class="btn-mini btn-danger step-fail-btn" data-index="${index}" title="Mark this step as Fail">❌ Fail</button>
+                    <button class="btn btn-mini btn-pass" data-step-index="${index}" title="Mark this step as Pass">✅ Pass</button>
+                    <button class="btn btn-mini btn-fail" data-step-index="${index}" title="Mark this step as Fail">❌ Fail</button>
                 </div>
             `;
-            
-            // Add event listeners for step buttons using event delegation
-            const passBtn = stepElement.querySelector('.step-pass-btn');
-            const failBtn = stepElement.querySelector('.step-fail-btn');
-            
-            passBtn.addEventListener('click', () => this.markStep(index, 'pass'));
-            failBtn.addEventListener('click', () => this.markStep(index, 'fail'));
             
             stepsList.appendChild(stepElement);
         });
@@ -279,133 +271,9 @@ class SidePanelTestingAssistant {
         }
     }
 
-    // Modal management
-    showScriptModal() {
-        document.getElementById('scriptModal').style.display = 'flex';
-    }
-
-    hideScriptModal() {
-        document.getElementById('scriptModal').style.display = 'none';
-    }
-
-    showExportModal() {
-        this.updateExportSummary();
-        document.getElementById('exportModal').style.display = 'flex';
-    }
-
-    hideExportModal() {
-        document.getElementById('exportModal').style.display = 'none';
-    }
-
-    // Script functionality
-    handleFileUpload(event) {
-        const file = event.target.files[0];
-        if (file) {
-            this.readScriptFile(file);
-        }
-    }
-
-    handleFileDrop(event) {
-        const files = event.dataTransfer.files;
-        if (files.length > 0) {
-            this.readScriptFile(files[0]);
-        }
-    }
-
-    readScriptFile(file) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            document.getElementById('scriptText').value = e.target.result;
-        };
-        reader.readAsText(file);
-    }
-
-    loadScript() {
-        const scriptText = document.getElementById('scriptText').value.trim();
-        if (!scriptText) {
-            this.showNotification('Please enter or upload a script', 'warning');
-            return;
-        }
-
-        // Check if there's an active session, if not start one
-        if (!this.currentSession || this.currentSession.status !== 'active') {
-            this.startSession();
-        }
-
-        // Parse script into test steps and add them to the main test steps
-        const scriptSteps = scriptText.split('\n')
-            .map(line => line.trim())
-            .filter(line => line && !line.startsWith('#'))
-            .map(line => line.replace(/^\d+\.\s*/, '')); // Remove numbering
-
-        // Add each script step as a test step
-        scriptSteps.forEach(stepText => {
-            const step = {
-                id: Date.now() + Math.random(), // Ensure unique IDs
-                timestamp: new Date(),
-                description: stepText,
-                status: 'pending',
-                screenshots: [],
-                fromScript: true // Mark as script-generated
-            };
-            this.testSteps.push(step);
-        });
-
-        // Update the view to show the steps
-        this.updateStepsList();
-        this.updateSessionInfo();
-        this.saveData();
-        
-        this.hideScriptModal();
-        this.showNotification(`Script loaded: ${scriptSteps.length} steps added`, 'success');
-    }
-
-    clearScript() {
-        document.getElementById('scriptText').value = '';
-        this.saveData();
-    }
-
-    // Export functionality
-    exportData() {
-        const format = document.querySelector('input[name="format"]:checked').value;
-        const includeScreenshots = document.getElementById('includeScreenshots').checked;
-        const includeTimestamps = document.getElementById('includeTimestamps').checked;
-
-        const exportData = {
-            session: this.currentSession,
-            steps: this.testSteps.map(step => ({
-                ...step,
-                timestamp: includeTimestamps ? step.timestamp : undefined
-            })),
-            screenshots: includeScreenshots ? this.screenshots : [],
-            scriptSteps: this.testSteps.filter(step => step.fromScript).length,
-            exportedAt: new Date()
-        };
-
-        if (format === 'json') {
-            this.downloadJSON(exportData);
-        } else {
-            this.downloadHTML(exportData);
-        }
-
-        this.hideExportModal();
-    }
-
-    downloadJSON(data) {
-        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-        this.downloadBlob(blob, `test-session-${Date.now()}.json`);
-    }
-
-    downloadHTML(data) {
-        const html = this.generateHTMLReport(data);
-        const blob = new Blob([html], { type: 'text/html' });
-        this.downloadBlob(blob, `test-report-${Date.now()}.html`);
-    }
-
-    generateHTMLReport(data) {
-        return `
-<!DOCTYPE html>
-<html lang="en">
+    // Remove all script and export related methods and just keep the comment
+    
+    // Script and export functionality is handled in the main extension popup
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
