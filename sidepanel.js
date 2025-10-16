@@ -4,6 +4,7 @@ class SidePanelTestingAssistant {
         this.currentSession = null;
         this.sessionStartTime = null;
         this.sessionTimer = null;
+        this.syncCheckInterval = null;
         this.testSteps = [];
         this.screenshots = [];
         
@@ -22,13 +23,17 @@ class SidePanelTestingAssistant {
     }
 
     setupVisibilityHandlers() {
+        // Constants for timing
+        const VISIBILITY_REFRESH_DELAY = 100; // ms delay before refreshing data
+        const SYNC_CHECK_INTERVAL = 2000; // ms between sync checks
+        
         // Force refresh data when page becomes visible
         document.addEventListener('visibilitychange', () => {
             if (!document.hidden) {
                 // Page became visible - refresh data to ensure sync
                 setTimeout(() => {
                     this.loadSavedData();
-                }, 100);
+                }, VISIBILITY_REFRESH_DELAY);
             }
         });
         
@@ -36,15 +41,23 @@ class SidePanelTestingAssistant {
         window.addEventListener('focus', () => {
             setTimeout(() => {
                 this.loadSavedData();
-            }, 100);
+            }, VISIBILITY_REFRESH_DELAY);
         });
         
-        // Periodic sync check (every 2 seconds when visible)
-        setInterval(() => {
+        // Periodic sync check (only when visible)
+        this.syncCheckInterval = setInterval(() => {
             if (!document.hidden) {
                 this.syncCheck();
             }
-        }, 2000);
+        }, SYNC_CHECK_INTERVAL);
+        
+        // Cleanup interval when page is about to unload
+        window.addEventListener('beforeunload', () => {
+            if (this.syncCheckInterval) {
+                clearInterval(this.syncCheckInterval);
+                this.syncCheckInterval = null;
+            }
+        });
     }
 
     async syncCheck() {
@@ -53,14 +66,35 @@ class SidePanelTestingAssistant {
             const data = result.testingAssistantData;
             
             if (data) {
-                // Check if our data is stale
+                // Check if our data is stale by comparing multiple factors
                 const serverSteps = data.testSteps || [];
                 const serverSession = data.currentSession;
                 
-                if (serverSteps.length !== this.testSteps.length || 
-                    (serverSession && serverSession.status !== (this.currentSession ? this.currentSession.status : null))) {
+                // Check for differences in step count, session status, or step modifications
+                const stepCountDiff = serverSteps.length !== this.testSteps.length;
+                const sessionStatusDiff = (serverSession && serverSession.status) !== (this.currentSession ? this.currentSession.status : null);
+                
+                // Check for step modifications by comparing last modification times
+                let stepModificationDiff = false;
+                if (serverSteps.length === this.testSteps.length && serverSteps.length > 0) {
+                    // Compare step statuses and timestamps to detect modifications
+                    for (let i = 0; i < serverSteps.length; i++) {
+                        if (serverSteps[i].status !== this.testSteps[i].status ||
+                            serverSteps[i].id !== this.testSteps[i].id) {
+                            stepModificationDiff = true;
+                            break;
+                        }
+                    }
+                }
+                
+                if (stepCountDiff || sessionStatusDiff || stepModificationDiff) {
                     // Data is out of sync, refresh
-                    console.log('Sidepanel data out of sync, refreshing...');
+                    console.log('Sidepanel data out of sync, refreshing...', {
+                        stepCountDiff,
+                        sessionStatusDiff,
+                        stepModificationDiff
+                    });
+                    
                     this.currentSession = serverSession;
                     this.testSteps = serverSteps;
                     this.screenshots = data.screenshots || [];
