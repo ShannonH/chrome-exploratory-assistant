@@ -149,7 +149,15 @@ class TestingAssistant {
     }
 
     updateSessionInfo() {
-        if (!this.sessionStartTime) return;
+        // Always show current counts even when session isn't active
+        document.getElementById('stepCount').textContent = this.testSteps.length;
+        document.getElementById('screenshotCount').textContent = this.screenshots.length;
+        
+        // Only update timer if there's an active session
+        if (!this.sessionStartTime || !this.currentSession || this.currentSession.status !== 'active') {
+            document.getElementById('sessionTime').textContent = '00:00:00';
+            return;
+        }
 
         const elapsed = Date.now() - this.sessionStartTime;
         const hours = Math.floor(elapsed / 3600000);
@@ -158,8 +166,6 @@ class TestingAssistant {
 
         document.getElementById('sessionTime').textContent = 
             `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-        document.getElementById('stepCount').textContent = this.testSteps.length;
-        document.getElementById('screenshotCount').textContent = this.screenshots.length;
     }
 
     updateStatus(text, type = 'ready') {
@@ -816,7 +822,11 @@ class TestingAssistant {
                     document.getElementById('actionButtons').style.display = 'block';
                     this.updateStatus('Testing in progress', 'warning');
                     this.startSessionTimer();
+                    this.updateSessionInfo(); // Immediately update to show current values
                 }
+                
+                // Always update session info to show current counts
+                this.updateSessionInfo();
             }
         } catch (error) {
             console.error('Failed to load saved data:', error);
@@ -827,24 +837,41 @@ class TestingAssistant {
         // Sync data changes between popup and sidepanel
         let shouldUpdate = false;
 
-        if (changes.testSteps) {
-            this.testSteps = changes.testSteps.newValue || [];
-            shouldUpdate = true;
-        }
-        
-        if (changes.screenshots) {
-            this.screenshots = changes.screenshots.newValue || [];
-            shouldUpdate = true;
-        }
-        
-        if (changes.currentSession) {
-            this.currentSession = changes.currentSession.newValue;
-            shouldUpdate = true;
+        if (changes.testingAssistantData && changes.testingAssistantData.newValue) {
+            const newData = changes.testingAssistantData.newValue;
+            
+            if (newData.testSteps) {
+                this.testSteps = newData.testSteps;
+                shouldUpdate = true;
+            }
+            
+            if (newData.screenshots) {
+                this.screenshots = newData.screenshots;
+                shouldUpdate = true;
+            }
+            
+            if (newData.currentSession) {
+                this.currentSession = newData.currentSession;
+                
+                // Update session timer if session status changed
+                if (this.currentSession && this.currentSession.status === 'active' && this.currentSession.startTime) {
+                    this.sessionStartTime = new Date(this.currentSession.startTime).getTime();
+                    if (!this.sessionTimer) {
+                        this.startSessionTimer();
+                    }
+                } else if (this.sessionTimer) {
+                    clearInterval(this.sessionTimer);
+                    this.sessionTimer = null;
+                }
+                
+                shouldUpdate = true;
+            }
         }
 
         if (shouldUpdate) {
             this.updateStepsList();
             this.updateSessionInfo();
+            this.updateExportSummary();
         }
     }
 }
