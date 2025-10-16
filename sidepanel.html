@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Testing Assistant - Side Panel</title>
+    <link rel="stylesheet" href="sidepanel.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="logo">
+                <div class="logo-icon">🔍</div>
+                <h1>Testing Assistant</h1>
+            </div>
+            <div class="status-indicator" id="statusIndicator">
+                <span class="status-dot"></span>
+                <span id="statusText">Ready</span>
+            </div>
+        </header>
+
+        <div class="session-controls">
+            <button id="startSession" class="btn btn-primary">
+                <span class="btn-icon">▶️</span>
+                Start Session
+            </button>
+            <button id="endSession" class="btn btn-secondary" disabled>
+                <span class="btn-icon">⏹️</span>
+                End Session
+            </button>
+        </div>
+
+        <div class="test-info" id="testInfo" style="display: none;">
+            <div class="info-card">
+                <div class="info-row">
+                    <span class="label">Session Time:</span>
+                    <span id="sessionTime">00:00:00</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Steps:</span>
+                    <span id="stepCount">0</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Screenshots:</span>
+                    <span id="screenshotCount">0</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="action-buttons" id="actionButtons" style="display: none;">
+            <button id="addStep" class="btn btn-outline">
+                <span class="btn-icon">➕</span>
+                Add Step
+            </button>
+        </div>
+
+        <div class="fallback-actions" id="fallbackActions" style="display: block;">
+            <div class="info-message">
+                <span class="btn-icon">ℹ️</span>
+                Screenshots only work from the main extension popup
+            </div>
+            <button id="openMainExtension" class="btn btn-primary">
+                <span class="btn-icon">🔗</span>
+                Open Main Extension
+            </button>
+        </div>
+
+        <div class="step-input" id="stepInput" style="display: none;">
+            <textarea id="stepDescription" placeholder="Describe this test step..."></textarea>
+            <div class="step-actions">
+                <button id="saveStep" class="btn btn-small btn-primary">Save</button>
+                <button id="cancelStep" class="btn btn-small btn-secondary">Cancel</button>
+            </div>
+        </div>
+
+        <div class="test-steps-section">
+            <div class="section-header">
+                <h3>Test Steps</h3>
+            </div>
+            <div class="steps-list" id="stepsList"></div>
+        </div>
+
+        <div class="info-message main-extension-notice">
+            <span class="btn-icon">📋</span>
+            For script import and report export, use the main extension popup
+        </div>
+    </div>
+
+    <script src="sidepanel.js"></script>
+</body>
+</html>

@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Testing Assistant Overlay</title>
+    <link rel="stylesheet" href="overlay.css">
+</head>
+<body>
+    <div class="overlay-container">
+        <div class="overlay-header">
+            <div class="overlay-title">
+                <span class="overlay-icon">🔍</span>
+                <span>Testing Assistant</span>
+            </div>
+            <button class="overlay-close" onclick="closeOverlay()">×</button>
+        </div>
+        
+        <div class="overlay-content" id="overlayContent">
+            <!-- Content will be dynamically populated -->
+        </div>
+        
+        <div class="overlay-actions" id="overlayActions">
+            <!-- Actions will be dynamically populated -->
+        </div>
+    </div>
+
+    <script>
+        function closeOverlay() {
+            window.parent.postMessage({ action: 'closeOverlay' }, '*');
+        }
+
+        function sendMessage(action, data) {
+            window.parent.postMessage({ action, data }, '*');
+        }
+
+        // Listen for messages from parent window
+        window.addEventListener('message', (event) => {
+            if (event.data.action === 'updateContent') {
+                updateOverlayContent(event.data.content, event.data.actions);
+            }
+        });
+
+        function updateOverlayContent(content, actions) {
+            const contentElement = document.getElementById('overlayContent');
+            const actionsElement = document.getElementById('overlayActions');
+            
+            if (content) {
+                contentElement.innerHTML = content;
+            }
+            
+            if (actions) {
+                actionsElement.innerHTML = actions;
+            }
+        }
+
+        // Fade in animation when loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            document.body.classList.add('fade-in');
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,58 @@
+Sample Test Script for E-commerce Website Testing
+
+# Login Functionality Testing
+1. Navigate to the login page
+2. Verify login form is displayed correctly
+3. Test with valid credentials
+4. Verify successful login redirect
+5. Test with invalid credentials
+6. Verify error message display
+7. Test password reset functionality
+
+# Product Search and Browse
+8. Navigate to product catalog
+9. Test search functionality with valid product name
+10. Verify search results are relevant
+11. Test filtering options (price, category, brand)
+12. Test sorting options (price, popularity, ratings)
+13. Verify product details page loads correctly
+
+# Shopping Cart Functionality  
+14. Add product to cart from product page
+15. Verify cart counter updates
+16. Navigate to shopping cart
+17. Verify product appears in cart
+18. Test quantity adjustment
+19. Test item removal from cart
+20. Test cart persistence across sessions
+
+# Checkout Process
+21. Proceed to checkout from cart
+22. Fill in shipping information
+23. Select shipping method
+24. Fill in payment information
+25. Review order summary
+26. Submit order
+27. Verify order confirmation page
+
+# User Profile Management
+28. Navigate to user profile
+29. Update personal information
+30. Change password
+31. View order history
+32. Test address book functionality
+
+# Mobile Responsiveness
+33. Test on mobile viewport
+34. Verify navigation menu works on mobile
+35. Test touch interactions
+36. Verify forms are usable on mobile
+37. Test image loading and display
+
+# Performance and Usability
+38. Measure page load times
+39. Test browser back/forward navigation
+40. Verify all links work correctly
+41. Test with JavaScript disabled
+42. Verify accessibility features
+43. Test error handling scenarios

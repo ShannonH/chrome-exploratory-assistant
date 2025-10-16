@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Page for Exploratory Testing Assistant</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .section {
+            margin: 30px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .button {
+            background: #007cba;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .button:hover {
+            background: #005a87;
+        }
+        .form-group {
+            margin: 10px 0;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        .form-group input, .form-group textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        .success { color: green; }
+        .error { color: red; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <h1>Exploratory Testing Assistant - Test Page</h1>
+    <p>This page is designed to help you test the Chrome Exploratory Testing Assistant extension. Try various interactions and use the extension to document your testing process.</p>
+
+    <div class="section">
+        <h2>Sample Login Form</h2>
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="username">Username:</label>
+                <input type="text" id="username" name="username" placeholder="Enter username">
+            </div>
+            <div class="form-group">
+                <label for="password">Password:</label>
+                <input type="password" id="password" name="password" placeholder="Enter password">
+            </div>
+            <button type="submit" class="button">Login</button>
+        </form>
+        <div id="loginResult" class="hidden"></div>
+    </div>
+
+    <div class="section">
+        <h2>Interactive Elements</h2>
+        <button class="button" onclick="showAlert()">Show Alert</button>
+        <button class="button" onclick="changeContent()">Change Content</button>
+        <button class="button" onclick="toggleVisibility()">Toggle Section</button>
+        <button class="button" onclick="addListItem()">Add List Item</button>
+        
+        <div id="dynamicContent" style="margin-top: 20px;">
+            <p>This content can be changed dynamically.</p>
+        </div>
+        
+        <div id="toggleSection" style="margin-top: 20px; padding: 10px; background: #f0f0f0;">
+            <p>This section can be toggled on/off.</p>
+        </div>
+        
+        <ul id="dynamicList" style="margin-top: 20px;">
+            <li>Initial list item</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>Form Elements</h2>
+        <form id="testForm">
+            <div class="form-group">
+                <label for="textInput">Text Input:</label>
+                <input type="text" id="textInput" name="textInput" placeholder="Enter some text">
+            </div>
+            
+            <div class="form-group">
+                <label for="emailInput">Email Input:</label>
+                <input type="email" id="emailInput" name="emailInput" placeholder="user@example.com">
+            </div>
+            
+            <div class="form-group">
+                <label for="selectInput">Select Dropdown:</label>
+                <select id="selectInput" name="selectInput">
+                    <option value="">Choose an option</option>
+                    <option value="option1">Option 1</option>
+                    <option value="option2">Option 2</option>
+                    <option value="option3">Option 3</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="checkbox1" name="checkbox1" value="yes">
+                    Check this box
+                </label>
+            </div>
+            
+            <div class="form-group">
+                <label>
+                    <input type="radio" name="radioGroup" value="radio1">
+                    Radio Option 1
+                </label>
+                <label>
+                    <input type="radio" name="radioGroup" value="radio2">
+                    Radio Option 2
+                </label>
+            </div>
+            
+            <div class="form-group">
+                <label for="textareaInput">Textarea:</label>
+                <textarea id="textareaInput" name="textareaInput" rows="4" placeholder="Enter multiple lines of text"></textarea>
+            </div>
+            
+            <button type="submit" class="button">Submit Form</button>
+            <button type="reset" class="button" style="background: #666;">Reset Form</button>
+        </form>
+        <div id="formResult" class="hidden"></div>
+    </div>
+
+    <div class="section">
+        <h2>Testing Scenarios</h2>
+        <h3>Suggested Test Cases:</h3>
+        <ol>
+            <li>Take a screenshot of this page</li>
+            <li>Test the login form with valid credentials</li>
+            <li>Test the login form with invalid credentials</li>
+            <li>Try all the interactive buttons and document their behavior</li>
+            <li>Fill out the test form completely and submit</li>
+            <li>Test form validation by submitting empty required fields</li>
+            <li>Test the dynamic content changes</li>
+            <li>Verify that the page is responsive by resizing the browser</li>
+            <li>Check that all links and buttons are functional</li>
+            <li>Test keyboard navigation through form elements</li>
+        </ol>
+    </div>
+
+    <script>
+        // Login form handling
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const result = document.getElementById('loginResult');
+            
+            result.classList.remove('hidden');
+            
+            if (username === 'admin' && password === 'password123') {
+                result.innerHTML = '<p class="success">✅ Login successful! Welcome, ' + username + '!</p>';
+            } else {
+                result.innerHTML = '<p class="error">❌ Login failed. Try username: "admin", password: "password123"</p>';
+            }
+        });
+
+        // Test form handling
+        document.getElementById('testForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            const result = document.getElementById('formResult');
+            
+            let resultText = '<h4>Form Submitted Successfully!</h4><ul>';
+            for (let [key, value] of formData.entries()) {
+                if (value) {
+                    resultText += `<li><strong>${key}:</strong> ${value}</li>`;
+                }
+            }
+            resultText += '</ul>';
+            
+            result.innerHTML = resultText;
+            result.classList.remove('hidden');
+        });
+
+        // Interactive functions
+        function showAlert() {
+            alert('This is a test alert! You can document this interaction.');
+        }
+
+        function changeContent() {
+            const content = document.getElementById('dynamicContent');
+            const messages = [
+                'Content has been changed!',
+                'This is the new content.',
+                'Content updated again!',
+                'Another content change.',
+                'Back to original content.'
+            ];
+            const randomMessage = messages[Math.floor(Math.random() * messages.length)];
+            content.innerHTML = `<p style="color: blue;">${randomMessage}</p>`;
+        }
+
+        function toggleVisibility() {
+            const section = document.getElementById('toggleSection');
+            section.style.display = section.style.display === 'none' ? 'block' : 'none';
+        }
+
+        let listCounter = 1;
+        function addListItem() {
+            const list = document.getElementById('dynamicList');
+            const newItem = document.createElement('li');
+            newItem.textContent = `Dynamically added item ${listCounter}`;
+            list.appendChild(newItem);
+            listCounter++;
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,296 @@
+/* Content script styles for Exploratory Testing Assistant */
+/* These styles are injected into web pages to support testing features */
+
+.testing-assistant-highlight {
+    outline: 3px solid #6366f1 !important;
+    outline-offset: 2px !important;
+    background-color: rgba(99, 102, 241, 0.1) !important;
+    position: relative !important;
+    z-index: 9998 !important;
+    transition: all 0.3s ease !important;
+}
+
+.testing-assistant-highlight::before {
+    content: '🔍 Testing Focus' !important;
+    position: absolute !important;
+    top: -30px !important;
+    left: 0 !important;
+    background: #6366f1 !important;
+    color: white !important;
+    padding: 4px 8px !important;
+    font-size: 12px !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+    border-radius: 4px !important;
+    z-index: 9999 !important;
+    white-space: nowrap !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) !important;
+}
+
+.testing-assistant-overlay {
+    position: fixed !important;
+    top: 20px !important;
+    right: 20px !important;
+    background: white !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 8px !important;
+    padding: 16px !important;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2) !important;
+    z-index: 10000 !important;
+    max-width: 300px !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+    font-size: 14px !important;
+    line-height: 1.5 !important;
+    color: #1e293b !important;
+    backdrop-filter: blur(10px) !important;
+}
+
+.testing-assistant-overlay-header {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    margin-bottom: 12px !important;
+    font-weight: 600 !important;
+    color: #6366f1 !important;
+}
+
+.testing-assistant-overlay-close {
+    background: none !important;
+    border: none !important;
+    font-size: 18px !important;
+    cursor: pointer !important;
+    color: #64748b !important;
+    margin-left: auto !important;
+    padding: 0 !important;
+    width: 24px !important;
+    height: 24px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 4px !important;
+    transition: all 0.2s ease !important;
+}
+
+.testing-assistant-overlay-close:hover {
+    background: #f1f5f9 !important;
+    color: #1e293b !important;
+    transform: scale(1.1) !important;
+}
+
+.testing-assistant-annotation-tool {
+    position: fixed !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    background: white !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 12px !important;
+    padding: 20px !important;
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25) !important;
+    z-index: 10001 !important;
+    min-width: 400px !important;
+    max-width: 90vw !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+}
+
+.testing-assistant-annotation-backdrop {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    background: rgba(0, 0, 0, 0.5) !important;
+    z-index: 10000 !important;
+    backdrop-filter: blur(2px) !important;
+}
+
+.testing-assistant-screenshot-mode {
+    cursor: crosshair !important;
+}
+
+.testing-assistant-screenshot-instruction {
+    position: fixed !important;
+    top: 20px !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    background: #6366f1 !important;
+    color: white !important;
+    padding: 12px 20px !important;
+    border-radius: 8px !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+    font-size: 14px !important;
+    font-weight: 500 !important;
+    z-index: 10002 !important;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4) !important;
+    backdrop-filter: blur(10px) !important;
+}
+
+/* Animation classes */
+@keyframes testing-assistant-pulse {
+    0%, 100% { 
+        transform: scale(1) !important; 
+        opacity: 1 !important;
+    }
+    50% { 
+        transform: scale(1.05) !important; 
+        opacity: 0.8 !important;
+    }
+}
+
+.testing-assistant-pulse {
+    animation: testing-assistant-pulse 1s ease-in-out infinite !important;
+}
+
+@keyframes testing-assistant-fade-in {
+    from { 
+        opacity: 0 !important; 
+        transform: translateY(-10px) !important; 
+    }
+    to { 
+        opacity: 1 !important; 
+        transform: translateY(0) !important; 
+    }
+}
+
+.testing-assistant-fade-in {
+    animation: testing-assistant-fade-in 0.3s ease-out !important;
+}
+
+@keyframes testing-assistant-slide-in {
+    from { 
+        opacity: 0 !important; 
+        transform: translateX(100%) !important; 
+    }
+    to { 
+        opacity: 1 !important; 
+        transform: translateX(0) !important; 
+    }
+}
+
+.testing-assistant-slide-in {
+    animation: testing-assistant-slide-in 0.3s ease-out !important;
+}
+
+@keyframes testing-assistant-bounce {
+    0%, 20%, 50%, 80%, 100% {
+        transform: translateY(0) !important;
+    }
+    40% {
+        transform: translateY(-10px) !important;
+    }
+    60% {
+        transform: translateY(-5px) !important;
+    }
+}
+
+.testing-assistant-bounce {
+    animation: testing-assistant-bounce 1s ease-in-out !important;
+}
+
+/* Hover effects for interactive elements */
+.testing-assistant-interactive:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15) !important;
+    transition: all 0.2s ease !important;
+}
+
+/* Focus states for accessibility */
+.testing-assistant-overlay:focus-within {
+    outline: 2px solid #6366f1 !important;
+    outline-offset: 2px !important;
+}
+
+.testing-assistant-annotation-tool:focus-within {
+    outline: 2px solid #6366f1 !important;
+    outline-offset: 2px !important;
+}
+
+/* Responsive design for smaller screens */
+@media (max-width: 480px) {
+    .testing-assistant-overlay {
+        left: 10px !important;
+        right: 10px !important;
+        top: 10px !important;
+        max-width: none !important;
+    }
+    
+    .testing-assistant-annotation-tool {
+        left: 10px !important;
+        right: 10px !important;
+        top: 10px !important;
+        bottom: 10px !important;
+        width: auto !important;
+        min-width: auto !important;
+        max-width: none !important;
+        transform: none !important;
+        position: fixed !important;
+        overflow-y: auto !important;
+    }
+    
+    .testing-assistant-screenshot-instruction {
+        left: 10px !important;
+        right: 10px !important;
+        transform: none !important;
+        text-align: center !important;
+    }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .testing-assistant-highlight {
+        outline-color: #000000 !important;
+        background-color: rgba(255, 255, 0, 0.3) !important;
+    }
+    
+    .testing-assistant-overlay {
+        border: 2px solid #000000 !important;
+        background: #ffffff !important;
+        color: #000000 !important;
+    }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    .testing-assistant-pulse,
+    .testing-assistant-fade-in,
+    .testing-assistant-slide-in,
+    .testing-assistant-bounce {
+        animation: none !important;
+    }
+    
+    .testing-assistant-highlight,
+    .testing-assistant-overlay-close,
+    .testing-assistant-interactive {
+        transition: none !important;
+    }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    .testing-assistant-overlay {
+        background: #1e293b !important;
+        color: #f1f5f9 !important;
+        border-color: #374151 !important;
+    }
+    
+    .testing-assistant-annotation-tool {
+        background: #1e293b !important;
+        color: #f1f5f9 !important;
+        border-color: #374151 !important;
+    }
+    
+    .testing-assistant-overlay-close:hover {
+        background: #374151 !important;
+        color: #f1f5f9 !important;
+    }
+}
+
+/* Print styles - hide testing elements when printing */
+@media print {
+    .testing-assistant-highlight,
+    .testing-assistant-overlay,
+    .testing-assistant-annotation-tool,
+    .testing-assistant-annotation-backdrop,
+    .testing-assistant-screenshot-instruction {
+        display: none !important;
+    }
+}

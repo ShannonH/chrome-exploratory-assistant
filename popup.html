@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exploratory Testing Assistant</title>
+    <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="logo">
+                <div class="logo-icon">🔍</div>
+                <h1>Testing Assistant</h1>
+            </div>
+            <div class="header-controls">
+                <button id="openSidePanel" class="btn btn-outline btn-small" title="Pin for Testing - Opens detached window or side panel for always-visible testing">
+                    <span class="btn-icon">📌</span>
+                    Pin Assistant
+                </button>
+                <button id="helpToggle" class="btn btn-outline btn-small" title="Keyboard Shortcuts & Tips">
+                    <span class="btn-icon">❓</span>
+                </button>
+                <div class="status-indicator" id="statusIndicator">
+                    <span class="status-dot"></span>
+                    <span id="statusText">Ready</span>
+                </div>
+            </div>
+        </header>
+
+        <div class="tabs">
+            <button class="tab-button active" data-tab="test">Test Session</button>
+            <button class="tab-button" data-tab="script">Test Script</button>
+            <button class="tab-button" data-tab="export">Export</button>
+        </div>
+
+        <div class="tab-content" id="testTab">
+            <div class="session-controls">
+                <button id="startSession" class="btn btn-primary">
+                    <span class="btn-icon">▶️</span>
+                    Start Session
+                </button>
+                <button id="endSession" class="btn btn-secondary" disabled>
+                    <span class="btn-icon">⏹️</span>
+                    End Session
+                </button>
+            </div>
+
+            <div class="test-info" id="testInfo" style="display: none;">
+                <div class="info-card">
+                    <div class="info-row">
+                        <span class="label">Session Time:</span>
+                        <span id="sessionTime">00:00:00</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">Steps:</span>
+                        <span id="stepCount">0</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">Screenshots:</span>
+                        <span id="screenshotCount">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="action-buttons" id="actionButtons" style="display: none;">
+                <button id="takeScreenshot" class="btn btn-accent">
+                    <span class="btn-icon">📸</span>
+                    Screenshot
+                </button>
+                <button id="addStep" class="btn btn-outline">
+                    <span class="btn-icon">➕</span>
+                    Add Step
+                </button>
+            </div>
+
+            <div class="fallback-actions" id="fallbackActions" style="display: none;">
+                <div class="info-message">
+                    <span class="btn-icon">ℹ️</span>
+                    Screenshots only work from the main extension popup
+                </div>
+                <button id="openMainExtension" class="btn btn-primary">
+                    <span class="btn-icon">🔗</span>
+                    Open Main Extension
+                </button>
+            </div>
+
+            <div class="step-input" id="stepInput" style="display: none;">
+                <textarea id="stepDescription" placeholder="Describe this test step..."></textarea>
+                <div class="step-actions">
+                    <button id="saveStep" class="btn btn-small btn-primary">Save</button>
+                    <button id="cancelStep" class="btn btn-small btn-secondary">Cancel</button>
+                </div>
+            </div>
+
+            <div class="recent-steps" id="recentSteps">
+                <h3>Test Steps</h3>
+                <div class="steps-list" id="stepsList"></div>
+            </div>
+        </div>
+
+        <div class="tab-content" id="scriptTab" style="display: none;">
+            <div class="script-section">
+                <h3>Test Script</h3>
+                <p class="section-description">Upload or paste a test script to guide your exploratory testing</p>
+                
+                <div class="upload-area" id="uploadArea">
+                    <div class="upload-icon">📄</div>
+                    <p>Drag & drop a text file or click to browse</p>
+                    <input type="file" id="fileInput" accept=".txt,.md" hidden>
+                </div>
+
+                <div class="script-textarea">
+                    <textarea id="scriptText" placeholder="Or paste your test script here...
+
+Example:
+1. Navigate to login page
+2. Enter valid credentials
+3. Click login button
+4. Verify successful login
+5. Navigate to user profile
+6. Update profile information
+7. Save changes
+8. Verify updates are saved"></textarea>
+                </div>
+
+                <div class="script-actions">
+                    <button id="loadScript" class="btn btn-primary">Load Script</button>
+                    <button id="clearScript" class="btn btn-secondary">Clear</button>
+                </div>
+
+                <div class="script-progress" id="scriptProgress" style="display: none;">
+                    <h4>Script Progress</h4>
+                    <div class="progress-list" id="progressList"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-content" id="exportTab" style="display: none;">
+            <div class="export-section">
+                <h3>Export Test Results</h3>
+                <p class="section-description">Download your test session data and screenshots</p>
+
+                <div class="export-options">
+                    <div class="export-format">
+                        <label>
+                            <input type="radio" name="format" value="json">
+                            <span class="radio-label">JSON Format</span>
+                        </label>
+                        <label>
+                            <input type="radio" name="format" value="html" checked>
+                            <span class="radio-label">HTML Report</span>
+                        </label>
+                    </div>
+
+                    <div class="export-settings">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="includeScreenshots" checked>
+                            <span>Include Screenshots</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="includeTimestamps" checked>
+                            <span>Include Timestamps</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="export-actions">
+                    <button id="exportData" class="btn btn-primary">
+                        <span class="btn-icon">💾</span>
+                        Export Data
+                    </button>
+                    <button id="clearData" class="btn btn-danger">
+                        <span class="btn-icon">🗑️</span>
+                        Clear All Data
+                    </button>
+                </div>
+
+                <div class="export-summary" id="exportSummary">
+                    <!-- Summary will be populated by JavaScript -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Help Section -->
+    <div class="help-section" id="helpSection" style="display: none;">
+        <div class="help-content">
+            <h4>Quick Access Options</h4>
+            <div class="help-item">
+                <strong>📌 Pin Assistant:</strong> Creates a detached window that stays visible while testing
+            </div>
+            <div class="help-item">
+                <strong>⌨️ Keyboard Shortcuts:</strong>
+                <ul>
+                    <li><kbd>Alt+T</kbd> - Open Testing Assistant</li>
+                    <li><kbd>Alt+S</kbd> - Take Screenshot</li>
+                    <li><kbd>Alt+P</kbd> - Mark Step as Pass</li>
+                    <li><kbd>Alt+F</kbd> - Mark Step as Fail</li>
+                </ul>
+            </div>
+            <div class="help-item">
+                <strong>💡 Tips:</strong>
+                <ul>
+                    <li>Pin extension to Chrome toolbar for quick access</li>
+                    <li>Use right-click context menu for quick actions</li>
+                    <li>Load test scripts to guide systematic testing</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+</html>
