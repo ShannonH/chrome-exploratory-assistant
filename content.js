@@ -1,6 +1,10 @@
 // Content script for Exploratory Testing Assistant
 class ContentScriptHandler {
     constructor() {
+        // Constants for text truncation
+        this.MAX_ELEMENT_TEXT_LENGTH = 50;
+        this.MAX_INPUT_TEXT_LENGTH = 20;
+        
         this.isInjected = false;
         this.overlay = null;
         this.screenshotMode = false;
@@ -491,15 +495,15 @@ class ContentScriptHandler {
     getElementText(element) {
         // Get meaningful text from the element
         if (element.textContent && element.textContent.trim()) {
-            return element.textContent.trim().substring(0, 50);
+            return element.textContent.trim().substring(0, this.MAX_ELEMENT_TEXT_LENGTH);
         } else if (element.value) {
-            return `[Input: ${element.value.substring(0, 20)}]`;
+            return `[Input: ${element.value.substring(0, this.MAX_INPUT_TEXT_LENGTH)}]`;
         } else if (element.placeholder) {
-            return `[Placeholder: ${element.placeholder.substring(0, 20)}]`;
+            return `[Placeholder: ${element.placeholder.substring(0, this.MAX_INPUT_TEXT_LENGTH)}]`;
         } else if (element.alt) {
-            return `[Alt: ${element.alt.substring(0, 20)}]`;
+            return `[Alt: ${element.alt.substring(0, this.MAX_INPUT_TEXT_LENGTH)}]`;
         } else if (element.title) {
-            return `[Title: ${element.title.substring(0, 20)}]`;
+            return `[Title: ${element.title.substring(0, this.MAX_INPUT_TEXT_LENGTH)}]`;
         }
         return `[${element.tagName.toLowerCase()}]`;
     }

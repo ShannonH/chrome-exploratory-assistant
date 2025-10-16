@@ -489,7 +489,7 @@ Additional Information:
                     <label>Copy this text to your ADO ticket description:</label>
                     <textarea id="sidepanelBugReportText" readonly>${step.bugReport}</textarea>
                     <div class="bug-report-actions">
-                        <button class="btn btn-primary" onclick="navigator.clipboard.writeText(document.getElementById('sidepanelBugReportText').value).then(() => sidePanelTestingAssistant.showNotification('Bug report copied to clipboard!', 'success'))">📋 Copy</button>
+                        <button class="btn btn-primary" onclick="navigator.clipboard.writeText(document.getElementById('sidepanelBugReportText').value).then(() => sidePanelTestingAssistant.showNotification('Bug report copied to clipboard!', 'success')).catch(() => sidePanelTestingAssistant.showNotification('Failed to copy to clipboard', 'error'))">📋 Copy</button>
                         <button class="btn btn-secondary" onclick="this.closest('.bug-report-modal-overlay').remove()">Close</button>
                     </div>
                 </div>
@@ -579,6 +579,8 @@ Additional Information:
             }
         }, 100);
     }
+
+    showNotification(message, type = 'info') {
         // Create a temporary notification element
         const notification = document.createElement('div');
         notification.style.cssText = `
