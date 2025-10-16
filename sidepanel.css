@@ -234,8 +234,8 @@ body {
 }
 
 .info-message {
-    background: rgba(255, 193, 7, 0.1);
-    color: #856404;
+    background: rgba(59, 130, 246, 0.1);
+    color: #1e40af;
     padding: 8px 12px;
     border-radius: 6px;
     font-size: 11px;
@@ -244,6 +244,7 @@ body {
     align-items: center;
     justify-content: center;
     gap: 6px;
+    border: 1px solid rgba(59, 130, 246, 0.2);
 }
 
 /* Step Input */
