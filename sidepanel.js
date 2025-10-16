@@ -42,23 +42,6 @@ class SidePanelTestingAssistant {
             }
         });
     }
-
-        // Drag and drop for script upload
-        const uploadArea = document.getElementById('uploadArea');
-        uploadArea.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            uploadArea.classList.add('dragover');
-        });
-        uploadArea.addEventListener('dragleave', () => {
-            uploadArea.classList.remove('dragover');
-        });
-        uploadArea.addEventListener('drop', (e) => {
-            e.preventDefault();
-            uploadArea.classList.remove('dragover');
-            this.handleFileDrop(e);
-        });
-
-        this.updateExportSummary();
     }
 
     async startSession() {
@@ -274,50 +257,8 @@ class SidePanelTestingAssistant {
     // Remove all script and export related methods and just keep the comment
     
     // Script and export functionality is handled in the main extension popup
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Test Report</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 40px; }
-        .header { background: #6366f1; color: white; padding: 20px; border-radius: 8px; }
-        .section { margin: 20px 0; }
-        .step { border-left: 4px solid #6366f1; padding: 10px; margin: 10px 0; background: #f8fafc; }
-        .step.pass { border-left-color: #10b981; }
-        .step.fail { border-left-color: #ef4444; }
-        .screenshot { max-width: 100%; height: auto; border: 1px solid #ddd; margin: 10px 0; }
-        .timestamp { color: #666; font-size: 0.9em; }
-    </style>
-</head>
-<body>
-    <div class="header">
-        <h1>Exploratory Test Report</h1>
-        <p>Generated on: ${new Date().toLocaleString()}</p>
-    </div>
-    
-    <div class="section">
-        <h2>Session Information</h2>
-        <p><strong>Session ID:</strong> ${data.session?.id || 'N/A'}</p>
-        <p><strong>Start Time:</strong> ${data.session?.startTime ? new Date(data.session.startTime).toLocaleString() : 'N/A'}</p>
-        <p><strong>End Time:</strong> ${data.session?.endTime ? new Date(data.session.endTime).toLocaleString() : 'N/A'}</p>
-        <p><strong>Status:</strong> ${data.session?.status || 'N/A'}</p>
-    </div>
-    
-    <div class="section">
-        <h2>Test Steps (${data.steps.length})</h2>
-        ${data.steps.map((step, index) => `
-            <div class="step ${step.status}">
-                <h4>Step ${index + 1}: ${step.status.toUpperCase()}</h4>
-                <p>${step.description}</p>
-                ${step.timestamp ? `<div class="timestamp">${new Date(step.timestamp).toLocaleString()}</div>` : ''}
-            </div>
-        `).join('')}
-    </div>
-    
-    ${data.screenshots.length > 0 ? `
-    <div class="section">
-        <h2>Screenshots (${data.screenshots.length})</h2>
-        ${data.screenshots.map((screenshot, index) => `
+
+    formatTimestamp(timestamp) {
             <div>
                 <h4>Screenshot ${index + 1}</h4>
                 <p><strong>URL:</strong> ${screenshot.url}</p>
@@ -353,53 +294,7 @@ class SidePanelTestingAssistant {
         }
     }
 
-    clearAllData() {
-        if (confirm('Are you sure you want to clear all data? This cannot be undone.')) {
-            this.currentSession = null;
-            this.testSteps = [];
-            this.screenshots = [];
-            
-            // Clear only this extension's data
-            chrome.storage.local.remove('testingAssistantData');
-            
-            this.updateStepsList();
-            this.updateExportSummary();
-            this.updateSessionInfo();
-            
-            this.hideExportModal();
-            this.showNotification('All data cleared', 'success');
-        }
-    }
-
-    updateExportSummary() {
-        const summaryElement = document.getElementById('exportSummary');
-        const passedSteps = this.testSteps.filter(step => step.status === 'pass').length;
-        const failedSteps = this.testSteps.filter(step => step.status === 'fail').length;
-        
-        summaryElement.innerHTML = `
-            <h4>Session Summary</h4>
-            <div class="summary-item">
-                <span>Total Steps:</span>
-                <span>${this.testSteps.length}</span>
-            </div>
-            <div class="summary-item">
-                <span>Passed Steps:</span>
-                <span>${passedSteps}</span>
-            </div>
-            <div class="summary-item">
-                <span>Failed Steps:</span>
-                <span>${failedSteps}</span>
-            </div>
-            <div class="summary-item">
-                <span>Screenshots:</span>
-                <span>${this.screenshots.length}</span>
-            </div>
-            <div class="summary-item">
-                <span>Script Steps:</span>
-                <span>${this.testSteps.filter(step => step.fromScript).length}</span>
-            </div>
-        `;
-    }
+    // Script and export functionality is handled in the main extension popup
 
     showNotification(message, type = 'info') {
         // Create a temporary notification element
@@ -485,7 +380,6 @@ class SidePanelTestingAssistant {
                 
                 // Restore UI state
                 this.updateStepsList();
-                this.updateExportSummary();
                 
                 // Check if there's an active session
                 if (this.currentSession && this.currentSession.status === 'active') {
@@ -545,7 +439,6 @@ class SidePanelTestingAssistant {
         if (shouldUpdate) {
             this.updateStepsList();
             this.updateSessionInfo();
-            this.updateExportSummary();
         }
     }
 }
