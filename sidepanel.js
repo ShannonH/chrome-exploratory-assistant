@@ -495,39 +495,49 @@ Additional Information:
     // Script and export functionality is handled in the main extension popup
 
     formatTimestamp(timestamp) {
-            <div>
-                <h4>Screenshot ${index + 1}</h4>
-                <p><strong>URL:</strong> ${screenshot.url}</p>
-                <p><strong>Title:</strong> ${screenshot.title}</p>
-                <div class="timestamp">${new Date(screenshot.timestamp).toLocaleString()}</div>
-                <img src="${screenshot.dataUrl}" class="screenshot" alt="Screenshot ${index + 1}">
-            </div>
-        `).join('')}
-    </div>
-    ` : ''}
-</body>
-</html>
-        `;
+        try {
+            let date;
+            
+            if (!timestamp) {
+                return new Date().toLocaleString();
+            }
+            
+            // Handle multiple timestamp formats
+            if (timestamp instanceof Date) {
+                date = timestamp;
+            } else if (typeof timestamp === 'string') {
+                // Handle ISO strings and other formats
+                date = new Date(timestamp);
+            } else if (typeof timestamp === 'number') {
+                // Handle Unix timestamps (both seconds and milliseconds)
+                date = new Date(timestamp > 1000000000000 ? timestamp : timestamp * 1000);
+            } else {
+                // Fallback: try to convert whatever we got
+                date = new Date(timestamp);
+            }
+            
+            // Verify the date is valid
+            if (isNaN(date.getTime())) {
+                console.warn('Invalid timestamp:', timestamp);
+                return new Date().toLocaleString() + ' (now)';
+            }
+            
+            return date.toLocaleString();
+        } catch (error) {
+            console.error('Error formatting timestamp:', error, timestamp);
+            return new Date().toLocaleString() + ' (fallback)';
+        }
     }
 
-    downloadBlob(blob, filename) {
-        try {
-            chrome.downloads.download({
-                url: URL.createObjectURL(blob),
-                filename: filename,
-                saveAs: true
-            }, (downloadId) => {
-                if (chrome.runtime.lastError) {
-                    console.error('Download failed:', chrome.runtime.lastError);
-                    this.showNotification('Download failed', 'error');
-                } else {
-                    this.showNotification('File downloaded successfully', 'success');
-                }
-            });
-        } catch (error) {
-            console.error('Download error:', error);
-            this.showNotification('Download failed', 'error');
-        }
+    saveData() {
+        const data = {
+            currentSession: this.currentSession,
+            testSteps: this.testSteps,
+            screenshots: this.screenshots,
+            // Script data now stored within testSteps with fromScript flag
+        };
+        
+        chrome.storage.local.set({ testingAssistantData: data });
     }
 
     showBugReportModal(stepIndex) {

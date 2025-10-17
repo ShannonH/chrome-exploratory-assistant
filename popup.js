@@ -261,6 +261,8 @@ class TestingAssistant {
         // If no in-progress steps, return the last step index
         return this.testSteps.length > 0 ? this.testSteps.length - 1 : null;
     }
+
+    showFallbackActions() {
         const actionButtons = document.getElementById('actionButtons');
         const fallbackActions = document.getElementById('fallbackActions');
         
