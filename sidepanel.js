@@ -276,7 +276,9 @@ class SidePanelTestingAssistant {
 
         const step = {
             id: Date.now(),
-            timestamp: new Date(),
+            timestamp: new Date(), // When step was created
+            startTime: new Date(), // When step tracking started
+            endTime: null, // Will be set when step is marked pass/fail
             description: description,
             status: 'in-progress',
             screenshots: [],
@@ -314,6 +316,7 @@ class SidePanelTestingAssistant {
         if (index >= 0 && index < this.testSteps.length) {
             const currentStatus = this.testSteps[index].status;
             this.testSteps[index].status = status;
+            this.testSteps[index].endTime = new Date(); // Track when step was completed
 
             // If marking as failed, capture click path and generate bug report
             if (status === 'fail') {
@@ -449,11 +452,29 @@ class SidePanelTestingAssistant {
         };
     }
 
+    calculateDuration(startTime, endTime) {
+        if (!startTime || !endTime) return '';
+        
+        const start = new Date(startTime);
+        const end = new Date(endTime);
+        const diffMs = end - start;
+        
+        if (diffMs < 1000) {
+            return `${diffMs}ms`;
+        } else if (diffMs < 60000) {
+            return `${Math.round(diffMs / 1000)}s`;
+        } else {
+            const minutes = Math.floor(diffMs / 60000);
+            const seconds = Math.round((diffMs % 60000) / 1000);
+            return `${minutes}m ${seconds}s`;
+        }
+    }
+
     generateBugReport(step) {
         const stepName = step.description;
         const clickPath = step.clickPath || [];
-        const startingUrl = step.startingUrl || 'Unknown';
-        const endingUrl = step.endingUrl || 'Unknown';
+        const startingUrl = step.startingUrl || window.location.href || 'Unknown';
+        const endingUrl = step.endingUrl || window.location.href || 'Unknown';
 
         let stepsToReproduce = '';
         if (clickPath.length > 0) {
@@ -461,8 +482,16 @@ class SidePanelTestingAssistant {
                 return `${index + 1}. Click on "${click.elementText}" (${click.elementType}) at ${click.url}`;
             }).join('\n');
         } else {
-            stepsToReproduce = 'No click path captured for this step';
+            // Provide helpful fallback when no clicks captured
+            stepsToReproduce = `1. Navigate to: ${startingUrl}
+2. Perform the test action: "${stepName}"
+3. Observe the failure at: ${endingUrl}
+
+Note: Detailed click tracking was not available for this step.`;
         }
+
+        const duration = step.startTime && step.endTime ? 
+            `\n- Step Duration: ${this.calculateDuration(step.startTime, step.endTime)}` : '';
 
         return `Issue: Bug encountered during ${stepName}
 
@@ -474,7 +503,8 @@ ${stepsToReproduce}
 
 Additional Information:
 - Step Status: Failed
-- Timestamp: ${this.formatTimestamp(step.timestamp)}
+- Started: ${this.formatTimestamp(step.startTime || step.timestamp)}
+- Ended: ${step.endTime ? this.formatTimestamp(step.endTime) : 'In progress'}${duration}
 - Session ID: ${this.currentSession?.id || 'N/A'}`;
     }
 

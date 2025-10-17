@@ -1016,3 +1016,23 @@ body {
     background: #d97706;
     border-color: #d97706;
 }
+
+/* Step timing styles */
+.step-timing {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 8px;
+}
+
+.step-start,
+.step-end {
+    display: block;
+}
+
+.step-duration {
+    font-weight: 500;
+    color: var(--text-secondary);
+}
