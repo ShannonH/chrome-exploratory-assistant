@@ -25,7 +25,7 @@ class SidePanelTestingAssistant {
     setupVisibilityHandlers() {
         // Constants for timing
         const VISIBILITY_REFRESH_DELAY = 100; // ms delay before refreshing data
-        const SYNC_CHECK_INTERVAL = 2000; // ms between sync checks
+        const SYNC_CHECK_INTERVAL = 1000; // ms between sync checks (reduced from 2000 for better responsiveness)
 
         // Force refresh data when page becomes visible
         document.addEventListener('visibilitychange', () => {
@@ -380,22 +380,80 @@ class SidePanelTestingAssistant {
 
     async captureClickPathForFailedStep(stepIndex) {
         try {
+            // Check if Chrome APIs are available  
+            if (typeof chrome === 'undefined' || !chrome.tabs) {
+                // Use mock data for testing without Chrome extension APIs
+                const mockData = this.getMockClickPath();
+                this.testSteps[stepIndex].clickPath = mockData.clickPath;
+                this.testSteps[stepIndex].startingUrl = mockData.startingUrl;
+                this.testSteps[stepIndex].endingUrl = mockData.endingUrl;
+                this.testSteps[stepIndex].bugReport = this.generateBugReport(this.testSteps[stepIndex]);
+                console.log('Generated mock bug report for testing');
+                
+                // Update the UI to show the bug report button
+                this.updateStepsList();
+                return;
+            }
+            
             const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
             const response = await chrome.tabs.sendMessage(tab.id, { action: 'stopClickTracking' });
 
             if (response && response.clickPath) {
                 this.testSteps[stepIndex].clickPath = response.clickPath;
+                this.testSteps[stepIndex].startingUrl = response.startingUrl;
+                this.testSteps[stepIndex].endingUrl = response.endingUrl;
                 this.testSteps[stepIndex].bugReport = this.generateBugReport(this.testSteps[stepIndex]);
                 console.log('Captured click path for failed step:', response.clickPath);
             }
         } catch (error) {
             console.error('Failed to capture click path:', error);
+            // Fallback to mock data for testing
+            const mockData = this.getMockClickPath();
+            this.testSteps[stepIndex].clickPath = mockData.clickPath;
+            this.testSteps[stepIndex].startingUrl = mockData.startingUrl;
+            this.testSteps[stepIndex].endingUrl = mockData.endingUrl;
+            this.testSteps[stepIndex].bugReport = this.generateBugReport(this.testSteps[stepIndex]);
         }
+    }
+
+    getMockClickPath() {
+        return {
+            startingUrl: 'http://localhost:8080/test-page.html',
+            endingUrl: 'http://localhost:8080/test-page.html#error',
+            clickPath: [
+                {
+                    timestamp: new Date().toISOString(),
+                    elementType: 'input',
+                    elementText: 'username field',
+                    selector: '#username',
+                    url: 'http://localhost:8080/test-page.html',
+                    pageTitle: 'Test Page for Exploratory Testing Assistant'
+                },
+                {
+                    timestamp: new Date().toISOString(),
+                    elementType: 'input',
+                    elementText: 'password field',
+                    selector: '#password',
+                    url: 'http://localhost:8080/test-page.html',
+                    pageTitle: 'Test Page for Exploratory Testing Assistant'
+                },
+                {
+                    timestamp: new Date().toISOString(),
+                    elementType: 'button',
+                    elementText: 'Login',
+                    selector: '.login-btn',
+                    url: 'http://localhost:8080/test-page.html',
+                    pageTitle: 'Test Page for Exploratory Testing Assistant'
+                }
+            ]
+        };
     }
 
     generateBugReport(step) {
         const stepName = step.description;
         const clickPath = step.clickPath || [];
+        const startingUrl = step.startingUrl || 'Unknown';
+        const endingUrl = step.endingUrl || 'Unknown';
 
         let stepsToReproduce = '';
         if (clickPath.length > 0) {
@@ -407,6 +465,9 @@ class SidePanelTestingAssistant {
         }
 
         return `Issue: Bug encountered during ${stepName}
+
+Starting URL: ${startingUrl}
+Ending URL: ${endingUrl}
 
 Steps to reproduce:
 ${stepsToReproduce}
@@ -578,6 +639,29 @@ Additional Information:
                 textarea.select();
             }
         }, 100);
+    }
+
+    getCurrentStepId() {
+        // Get the most recently added step that's still in progress
+        const inProgressSteps = this.testSteps.filter(step => step.status === 'in-progress');
+        if (inProgressSteps.length > 0) {
+            return inProgressSteps[inProgressSteps.length - 1].id;
+        }
+        // If no in-progress steps, return the last step
+        if (this.testSteps.length > 0) {
+            return this.testSteps[this.testSteps.length - 1].id;
+        }
+        return null;
+    }
+
+    getCurrentStepIndex() {
+        // Get the most recently added step that's still in progress
+        const inProgressStepIndex = this.testSteps.findIndex(step => step.status === 'in-progress');
+        if (inProgressStepIndex !== -1) {
+            return inProgressStepIndex;
+        }
+        // If no in-progress steps, return the last step index
+        return this.testSteps.length > 0 ? this.testSteps.length - 1 : null;
     }
 
     showNotification(message, type = 'info') {

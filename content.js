@@ -66,7 +66,12 @@ class ContentScriptHandler {
                     break;
 
                 case 'getClickPath':
-                    sendResponse({ success: true, clickPath: this.currentStepClickPath });
+                    sendResponse({ 
+                        success: true, 
+                        clickPath: this.currentStepClickPath,
+                        startingUrl: this.startingUrl || window.location.href,
+                        endingUrl: window.location.href
+                    });
                     break;
 
                 default:
@@ -465,15 +470,21 @@ class ContentScriptHandler {
     startClickTracking() {
         this.isTrackingClicks = true;
         this.currentStepClickPath = [];
+        this.startingUrl = window.location.href;
         console.log('Started click tracking for current step');
     }
 
     stopClickTracking() {
         this.isTrackingClicks = false;
         const clickPath = [...this.currentStepClickPath];
+        const endingUrl = window.location.href;
         this.currentStepClickPath = [];
         console.log('Stopped click tracking, captured path:', clickPath);
-        return clickPath;
+        return {
+            clickPath: clickPath,
+            startingUrl: this.startingUrl || window.location.href,
+            endingUrl: endingUrl
+        };
     }
 
     recordClick(element) {

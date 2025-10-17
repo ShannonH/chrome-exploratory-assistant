@@ -219,7 +219,9 @@ class TestingAssistant {
                 timestamp: new Date(),
                 dataUrl: dataUrl,
                 url: tab.url,
-                title: tab.title
+                title: tab.title,
+                stepId: this.getCurrentStepId(), // Link to current step
+                stepIndex: this.getCurrentStepIndex() // For easy reference
             };
 
             this.screenshots.push(screenshot);
@@ -237,7 +239,28 @@ class TestingAssistant {
         }
     }
 
-    showFallbackActions() {
+    getCurrentStepId() {
+        // Get the most recently added step that's still in progress
+        const inProgressSteps = this.testSteps.filter(step => step.status === 'in-progress');
+        if (inProgressSteps.length > 0) {
+            return inProgressSteps[inProgressSteps.length - 1].id;
+        }
+        // If no in-progress steps, return the last step
+        if (this.testSteps.length > 0) {
+            return this.testSteps[this.testSteps.length - 1].id;
+        }
+        return null;
+    }
+
+    getCurrentStepIndex() {
+        // Get the most recently added step that's still in progress
+        const inProgressStepIndex = this.testSteps.findIndex(step => step.status === 'in-progress');
+        if (inProgressStepIndex !== -1) {
+            return inProgressStepIndex;
+        }
+        // If no in-progress steps, return the last step index
+        return this.testSteps.length > 0 ? this.testSteps.length - 1 : null;
+    }
         const actionButtons = document.getElementById('actionButtons');
         const fallbackActions = document.getElementById('fallbackActions');
         
@@ -377,8 +400,10 @@ class TestingAssistant {
             // Check if Chrome APIs are available
             if (typeof chrome === 'undefined' || !chrome.tabs) {
                 // Use mock data for testing without Chrome extension APIs
-                const mockClickPath = this.getMockClickPath();
-                this.testSteps[stepIndex].clickPath = mockClickPath;
+                const mockData = this.getMockClickPath();
+                this.testSteps[stepIndex].clickPath = mockData.clickPath;
+                this.testSteps[stepIndex].startingUrl = mockData.startingUrl;
+                this.testSteps[stepIndex].endingUrl = mockData.endingUrl;
                 this.testSteps[stepIndex].bugReport = this.generateBugReport(this.testSteps[stepIndex]);
                 console.log('Generated mock bug report for testing');
                 
@@ -392,49 +417,60 @@ class TestingAssistant {
             
             if (response && response.clickPath) {
                 this.testSteps[stepIndex].clickPath = response.clickPath;
+                this.testSteps[stepIndex].startingUrl = response.startingUrl;
+                this.testSteps[stepIndex].endingUrl = response.endingUrl;
                 this.testSteps[stepIndex].bugReport = this.generateBugReport(this.testSteps[stepIndex]);
                 console.log('Captured click path for failed step:', response.clickPath);
             }
         } catch (error) {
             console.error('Failed to capture click path:', error);
             // Fallback to mock data for testing
-            this.testSteps[stepIndex].clickPath = this.getMockClickPath();
+            const mockData = this.getMockClickPath();
+            this.testSteps[stepIndex].clickPath = mockData.clickPath;
+            this.testSteps[stepIndex].startingUrl = mockData.startingUrl;
+            this.testSteps[stepIndex].endingUrl = mockData.endingUrl;
             this.testSteps[stepIndex].bugReport = this.generateBugReport(this.testSteps[stepIndex]);
         }
     }
 
     getMockClickPath() {
-        return [
-            {
-                timestamp: new Date().toISOString(),
-                elementType: 'input',
-                elementText: 'username field',
-                selector: '#username',
-                url: 'http://localhost:8080/test-page.html',
-                pageTitle: 'Test Page for Exploratory Testing Assistant'
-            },
-            {
-                timestamp: new Date().toISOString(),
-                elementType: 'input',
-                elementText: 'password field',
-                selector: '#password',
-                url: 'http://localhost:8080/test-page.html',
-                pageTitle: 'Test Page for Exploratory Testing Assistant'
-            },
-            {
-                timestamp: new Date().toISOString(),
-                elementType: 'button',
-                elementText: 'Login',
-                selector: '.login-btn',
-                url: 'http://localhost:8080/test-page.html',
-                pageTitle: 'Test Page for Exploratory Testing Assistant'
-            }
-        ];
+        return {
+            startingUrl: 'http://localhost:8080/test-page.html',
+            endingUrl: 'http://localhost:8080/test-page.html#error',
+            clickPath: [
+                {
+                    timestamp: new Date().toISOString(),
+                    elementType: 'input',
+                    elementText: 'username field',
+                    selector: '#username',
+                    url: 'http://localhost:8080/test-page.html',
+                    pageTitle: 'Test Page for Exploratory Testing Assistant'
+                },
+                {
+                    timestamp: new Date().toISOString(),
+                    elementType: 'input',
+                    elementText: 'password field',
+                    selector: '#password',
+                    url: 'http://localhost:8080/test-page.html',
+                    pageTitle: 'Test Page for Exploratory Testing Assistant'
+                },
+                {
+                    timestamp: new Date().toISOString(),
+                    elementType: 'button',
+                    elementText: 'Login',
+                    selector: '.login-btn',
+                    url: 'http://localhost:8080/test-page.html',
+                    pageTitle: 'Test Page for Exploratory Testing Assistant'
+                }
+            ]
+        };
     }
 
     generateBugReport(step) {
         const stepName = step.description;
         const clickPath = step.clickPath || [];
+        const startingUrl = step.startingUrl || 'Unknown';
+        const endingUrl = step.endingUrl || 'Unknown';
         
         let stepsToReproduce = '';
         if (clickPath.length > 0) {
@@ -446,6 +482,9 @@ class TestingAssistant {
         }
 
         return `Issue: Bug encountered during ${stepName}
+
+Starting URL: ${startingUrl}
+Ending URL: ${endingUrl}
 
 Steps to reproduce:
 ${stepsToReproduce}
@@ -625,6 +664,32 @@ Additional Information:
         .copy-bug-report-btn:hover {
             background: #dc2626;
         }
+        .step-screenshots {
+            margin-top: 15px;
+            padding: 15px;
+            background: #f0f9ff;
+            border-radius: 8px;
+            border-left: 4px solid #0ea5e9;
+        }
+        .step-screenshots h5 {
+            color: #0ea5e9;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+        .step-screenshot {
+            margin-bottom: 15px;
+        }
+        .step-screenshot p {
+            margin-bottom: 5px;
+            font-weight: 500;
+            font-size: 12px;
+        }
+        .step-screenshot img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 6px;
+            border: 1px solid #d1d5db;
+        }
     </style>
 </head>
 <body>
@@ -643,11 +708,28 @@ Additional Information:
     
     <div class="section">
         <h2>Test Steps (${data.steps.length})</h2>
-        ${data.steps.map((step, index) => `
-            <div class="step ${step.status}">
+        ${data.steps.map((step, index) => {
+            // Find screenshots associated with this step
+            const stepScreenshots = data.screenshots.filter(screenshot => 
+                screenshot.stepId === step.id || screenshot.stepIndex === index
+            );
+            
+            return `
+            <div class="step ${step.status}" id="step-${step.id}">
                 <h4>Step ${index + 1}: ${step.status.toUpperCase()}</h4>
                 <p>${step.description}</p>
                 ${step.timestamp ? `<div class="timestamp">${this.formatTimestamp(step.timestamp)}</div>` : ''}
+                ${stepScreenshots.length > 0 ? `
+                    <div class="step-screenshots">
+                        <h5>📸 Screenshots for this step:</h5>
+                        ${stepScreenshots.map((screenshot, screenshotIndex) => `
+                            <div class="step-screenshot">
+                                <p><strong>Screenshot ${screenshotIndex + 1}</strong> - ${this.formatTimestamp(screenshot.timestamp)}</p>
+                                <img src="${screenshot.dataUrl}" class="screenshot" alt="Screenshot for Step ${index + 1}">
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : ''}
                 ${step.status === 'fail' && step.bugReport ? `
                     <div class="bug-report-section">
                         <h5>🐛 Bug Report for ADO Ticket</h5>
@@ -658,21 +740,33 @@ Additional Information:
                     </div>
                 ` : ''}
             </div>
-        `).join('')}
+        `;
+        }).join('')}
     </div>
     
     ${data.screenshots.length > 0 ? `
     <div class="section">
         <h2>Screenshots (${data.screenshots.length})</h2>
-        ${data.screenshots.map((screenshot, index) => `
+        ${data.screenshots.map((screenshot, index) => {
+            // Check if this screenshot is linked to a step
+            const linkedStepIndex = screenshot.stepIndex;
+            const linkedStep = linkedStepIndex !== null && linkedStepIndex !== undefined ? data.steps[linkedStepIndex] : null;
+            
+            return `
             <div>
                 <h4>Screenshot ${index + 1}</h4>
                 <p><strong>URL:</strong> ${screenshot.url}</p>
                 <p><strong>Title:</strong> ${screenshot.title}</p>
+                ${linkedStep ? `
+                    <p><strong>Associated with:</strong> <a href="#step-${linkedStep.id}">Step ${linkedStepIndex + 1}: ${linkedStep.description}</a></p>
+                ` : `
+                    <p><strong>Associated with:</strong> No specific step (taken during general session)</p>
+                `}
                 <div class="timestamp">${this.formatTimestamp(screenshot.timestamp)}</div>
                 <img src="${screenshot.dataUrl}" class="screenshot" alt="Screenshot ${index + 1}">
             </div>
-        `).join('')}
+        `;
+        }).join('')}
     </div>
     ` : ''}
 </body>
