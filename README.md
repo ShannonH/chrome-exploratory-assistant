@@ -103,10 +103,7 @@ chrome-exploratory-assistant/
 ├── overlay.html           # Overlay component
 ├── overlay.css            # Overlay styling
 ├── icons/                 # Extension icons
-│   ├── icon16.svg
-│   ├── icon32.svg
-│   ├── icon48.svg
-│   └── icon128.svg
+│   ├── super-qa.png
 └── README.md              # This file
 ```
 

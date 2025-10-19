@@ -7,20 +7,20 @@
     --success-color: #10b981;
     --danger-color: #ef4444;
     --warning-color: #f59e0b;
-    
+
     --bg-primary: #ffffff;
     --bg-secondary: #f8fafc;
     --bg-tertiary: #e2e8f0;
     --text-primary: #1e293b;
     --text-secondary: #64748b;
     --text-muted: #94a3b8;
-    
+
     --border-color: #e2e8f0;
     --border-radius: 8px;
     --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
     --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
     --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-    
+
     --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -51,30 +51,34 @@ body {
 
 /* Header Styles */
 .header {
-    padding: 16px;
+    padding: 6px;
     background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
     color: white;
     display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
     justify-content: space-between;
-    align-items: center;
     box-shadow: var(--shadow-md);
 }
 
 .header-controls {
+    padding: 6px;
+    width: 100%;
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 1rem;
+    margin-top: 0;
 }
 
 .logo {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 1rem;
 }
 
 .logo-icon {
     font-size: 24px;
-    background: rgba(255, 255, 255, 0.2);
     padding: 8px;
     border-radius: 50%;
     backdrop-filter: blur(10px);
@@ -648,11 +652,11 @@ body {
 }
 
 @keyframes slideIn {
-    from { 
+    from {
         opacity: 0;
         transform: translateY(-20px) scale(0.95);
     }
-    to { 
+    to {
         opacity: 1;
         transform: translateY(0) scale(1);
     }
@@ -946,11 +950,11 @@ body {
     body {
         width: 320px;
     }
-    
+
     .action-buttons {
         grid-template-columns: 1fr;
     }
-    
+
     .session-controls {
         flex-direction: column;
     }
