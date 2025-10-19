@@ -223,7 +223,18 @@ class TestingAssistant {
             };
 
             this.screenshots.push(screenshot);
+            
+            // Associate screenshot with the most recent step if exists
+            if (this.testSteps.length > 0) {
+                const mostRecentStep = this.testSteps[this.testSteps.length - 1];
+                if (!mostRecentStep.screenshots) {
+                    mostRecentStep.screenshots = [];
+                }
+                mostRecentStep.screenshots.push(screenshot);
+            }
+            
             this.updateSessionInfo();
+            this.updateStepsList(); // Update steps list to show associated screenshots
             this.saveData();
             
             // Show success feedback
@@ -339,9 +350,11 @@ class TestingAssistant {
             const stepNumber = index + 1;
             const scriptIndicator = step.fromScript ? '📋 ' : '';
             
+            const screenshotIndicator = (step.screenshots && step.screenshots.length > 0) ? ` 📸${step.screenshots.length}` : '';
+            
             stepElement.innerHTML = `
                 <div class="step-header">
-                    <span class="step-number">${scriptIndicator}Step ${stepNumber}</span>
+                    <span class="step-number">${scriptIndicator}Step ${stepNumber}${screenshotIndicator}</span>
                     <span class="step-status ${step.status}">${step.status}</span>
                 </div>
                 <div class="step-description">${step.description}</div>
@@ -606,8 +619,24 @@ class TestingAssistant {
                 <h4>Step ${index + 1}: ${step.status.toUpperCase()}</h4>
                 <p>${step.description}</p>
                 ${step.timestamp ? `<div class="timestamp">${this.formatTimestamp(step.timestamp)}</div>` : ''}
+                ${step.screenshots && step.screenshots.length > 0 ? `
+                    <div class="step-screenshots">
+                        <h5>Screenshots (${step.screenshots.length}):</h5>
+                        ${step.screenshots.map((screenshot, screenshotIndex) => `
+                            <div style="margin: 10px 0;">
+                                <img src="${screenshot.dataUrl}" class="screenshot" alt="Step ${index + 1} Screenshot ${screenshotIndex + 1}" style="max-width: 300px; height: auto; border: 1px solid #ddd;">
+                                <div class="timestamp">Taken: ${this.formatTimestamp(screenshot.timestamp)}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : ''}
                 ${step.status === 'fail' ? `
-                    <button class="bug-template-btn" onclick="openBugTemplate(${index}, '${step.description.replace(/'/g, "\\'")}', '${step.timestamp ? this.formatTimestamp(step.timestamp) : ''}')">
+                    <button class="bug-template-btn" 
+                            data-step-index="${index}" 
+                            data-step-description="${step.description.replace(/"/g, '&quot;').replace(/'/g, '&#39;')}" 
+                            data-step-timestamp="${step.timestamp ? this.formatTimestamp(step.timestamp).replace(/"/g, '&quot;') : ''}" 
+                            data-screenshot-count="${step.screenshots ? step.screenshots.length : 0}"
+                            onclick="openBugTemplateFromButton(this)">
                         🐛 Create Bug Template
                     </button>
                 ` : ''}
@@ -647,7 +676,16 @@ class TestingAssistant {
     </div>
 
     <script>
-        function openBugTemplate(stepIndex, stepDescription, timestamp) {
+        function openBugTemplateFromButton(button) {
+            const stepIndex = parseInt(button.dataset.stepIndex);
+            const stepDescription = button.dataset.stepDescription;
+            const timestamp = button.dataset.stepTimestamp;
+            const screenshotCount = parseInt(button.dataset.screenshotCount) || 0;
+            
+            openBugTemplate(stepIndex, stepDescription, timestamp, screenshotCount);
+        }
+        
+        function openBugTemplate(stepIndex, stepDescription, timestamp, screenshotCount = 0) {
             const modal = document.getElementById('bugTemplateModal');
             const textarea = document.getElementById('bugTemplateText');
             
@@ -713,6 +751,9 @@ class TestingAssistant {
 - Browser: \${getBrowserName()}
 - URL: \${window.location.origin}
 - Test Date: \${new Date().toLocaleDateString()}
+
+**Screenshots:**
+\${screenshotCount > 0 ? \`\${screenshotCount} screenshot(s) associated with this step\` : 'No screenshots associated with this step'}
 
 **Additional Information:**
 [Any other relevant details, screenshots, or context]

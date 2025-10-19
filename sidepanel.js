@@ -334,10 +334,11 @@ class SidePanelTestingAssistant {
             
             const stepNumber = index + 1;
             const scriptIndicator = step.fromScript ? '📋 ' : '';
+            const screenshotIndicator = (step.screenshots && step.screenshots.length > 0) ? ` 📸${step.screenshots.length}` : '';
             
             stepElement.innerHTML = `
                 <div class="step-header">
-                    <span class="step-number">${scriptIndicator}Step ${stepNumber}</span>
+                    <span class="step-number">${scriptIndicator}Step ${stepNumber}${screenshotIndicator}</span>
                     <span class="step-status ${step.status}">${step.status}</span>
                 </div>
                 <div class="step-description">${step.description}</div>
