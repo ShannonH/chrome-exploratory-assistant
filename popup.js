@@ -272,17 +272,19 @@ class TestingAssistant {
         document.getElementById('stepDescription').value = '';
     }
 
-    saveStep() {
+    async saveStep() {
         const description = document.getElementById('stepDescription').value.trim();
         if (!description) return;
 
+        const pageContext = await this.capturePageContext();
+        
         const step = {
             id: Date.now(),
             timestamp: new Date(),
             description: description,
             status: 'in-progress',
             screenshots: [],
-            pageContext: this.capturePageContext()
+            pageContext: pageContext
         };
 
         this.testSteps.push(step);
@@ -292,19 +294,18 @@ class TestingAssistant {
         this.saveData();
     }
 
-    capturePageContext() {
+    async capturePageContext() {
         try {
             // Try to get current tab information
-            return chrome.tabs.query({ active: true, currentWindow: true }).then(tabs => {
-                if (tabs.length > 0) {
-                    return {
-                        url: tabs[0].url,
-                        title: tabs[0].title,
-                        timestamp: new Date().toISOString()
-                    };
-                }
-                return null;
-            }).catch(() => null);
+            const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+            if (tabs.length > 0) {
+                return {
+                    url: tabs[0].url,
+                    title: tabs[0].title,
+                    timestamp: new Date().toISOString()
+                };
+            }
+            return null;
         } catch (error) {
             return null;
         }
@@ -676,6 +677,17 @@ class TestingAssistant {
                 console.log('Could not retrieve interaction data:', error);
             }
             
+            // Get browser name more reliably
+            function getBrowserName() {
+                const userAgent = navigator.userAgent;
+                if (userAgent.indexOf('Firefox') > -1) return 'Firefox';
+                if (userAgent.indexOf('Chrome') > -1) return 'Chrome';
+                if (userAgent.indexOf('Safari') > -1) return 'Safari';
+                if (userAgent.indexOf('Edge') > -1) return 'Edge';
+                if (userAgent.indexOf('Opera') > -1) return 'Opera';
+                return 'Unknown Browser';
+            }
+            
             // Generate bug template
             const template = \`**Bug Report**
 
@@ -698,7 +710,7 @@ class TestingAssistant {
 [What actually happened]
 
 **Environment:**
-- Browser: \${navigator.userAgent.split(' ')[navigator.userAgent.split(' ').length - 1] || 'Unknown'}
+- Browser: \${getBrowserName()}
 - URL: \${window.location.origin}
 - Test Date: \${new Date().toLocaleDateString()}
 
@@ -727,22 +739,38 @@ class TestingAssistant {
             document.getElementById('bugTemplateModal').style.display = 'none';
         }
         
-        function copyBugTemplate() {
+        async function copyBugTemplate() {
             const textarea = document.getElementById('bugTemplateText');
             const copySuccess = document.getElementById('copySuccess');
             
-            textarea.select();
-            textarea.setSelectionRange(0, 99999); // For mobile devices
-            
+            // Try modern Clipboard API first, then fallback to deprecated method
             try {
-                document.execCommand('copy');
-                copySuccess.classList.add('show');
-                setTimeout(() => {
-                    copySuccess.classList.remove('show');
-                }, 2000);
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    await navigator.clipboard.writeText(textarea.value);
+                    copySuccess.classList.add('show');
+                    setTimeout(() => {
+                        copySuccess.classList.remove('show');
+                    }, 2000);
+                } else {
+                    // Fallback for older browsers
+                    textarea.select();
+                    textarea.setSelectionRange(0, 99999); // For mobile devices
+                    
+                    const successful = document.execCommand('copy');
+                    if (successful) {
+                        copySuccess.classList.add('show');
+                        setTimeout(() => {
+                            copySuccess.classList.remove('show');
+                        }, 2000);
+                    } else {
+                        throw new Error('Copy command failed');
+                    }
+                }
             } catch (err) {
                 console.error('Failed to copy text: ', err);
-                // Fallback: show the text is selected
+                // Ultimate fallback: select text and show instructions
+                textarea.select();
+                textarea.setSelectionRange(0, 99999);
                 alert('Text selected! Press Ctrl+C (or Cmd+C on Mac) to copy.');
             }
         }

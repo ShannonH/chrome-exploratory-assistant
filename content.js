@@ -476,14 +476,19 @@ class ContentScriptHandler {
         }
 
         // Capture input values for certain field types (non-sensitive)
-        if (event.type === 'change' && element.tagName.toLowerCase() === 'input') {
-            const inputType = element.type.toLowerCase();
-            if (['radio', 'checkbox', 'select'].includes(inputType)) {
+        if (event.type === 'change') {
+            if (element.tagName.toLowerCase() === 'input') {
+                const inputType = element.type.toLowerCase();
+                if (['radio', 'checkbox'].includes(inputType)) {
+                    interactionData.value = element.value;
+                    interactionData.checked = element.checked;
+                } else if (!['password'].includes(inputType)) {
+                    // For non-password fields, just indicate if filled
+                    interactionData.hasValue = element.value.length > 0;
+                }
+            } else if (element.tagName.toLowerCase() === 'select') {
                 interactionData.value = element.value;
-                interactionData.checked = element.checked;
-            } else if (!['password'].includes(inputType)) {
-                // For non-password fields, just indicate if filled
-                interactionData.hasValue = element.value.length > 0;
+                interactionData.selectedIndex = element.selectedIndex;
             }
         }
 
