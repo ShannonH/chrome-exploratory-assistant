@@ -626,6 +626,16 @@ body {
     color: var(--primary-color);
 }
 
+.btn-mini.btn-screenshot {
+    background: #0ea5e9;
+    color: white;
+    border-color: #0284c7;
+}
+
+.btn-mini.btn-screenshot:hover {
+    background: #0284c7;
+}
+
 ::-webkit-scrollbar-thumb:hover {
     background: var(--text-muted);
 }

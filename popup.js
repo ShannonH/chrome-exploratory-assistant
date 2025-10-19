@@ -224,17 +224,7 @@ class TestingAssistant {
 
             this.screenshots.push(screenshot);
             
-            // Associate screenshot with the most recent step if exists
-            if (this.testSteps.length > 0) {
-                const mostRecentStep = this.testSteps[this.testSteps.length - 1];
-                if (!mostRecentStep.screenshots) {
-                    mostRecentStep.screenshots = [];
-                }
-                mostRecentStep.screenshots.push(screenshot);
-            }
-            
             this.updateSessionInfo();
-            this.updateStepsList(); // Update steps list to show associated screenshots
             this.saveData();
             
             // Show success feedback
@@ -244,6 +234,68 @@ class TestingAssistant {
             console.error('Screenshot error:', error);
             
             // Show fallback actions instead of just error message
+            this.showFallbackActions();
+        }
+    }
+
+    async takeScreenshotForStep(stepIndex) {
+        try {
+            // Check if we're in a Chrome extension environment
+            if (!chrome || !chrome.tabs || !chrome.runtime || !chrome.runtime.getManifest) {
+                this.showFallbackActions();
+                return;
+            }
+
+            const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+            if (tabs.length === 0) {
+                this.showNotification('No active tab found for screenshot', 'error');
+                return;
+            }
+            
+            const tab = tabs[0];
+            
+            // Send message to content script to prepare for screenshot
+            try {
+                await chrome.tabs.sendMessage(tab.id, { action: 'prepareScreenshot' });
+            } catch (error) {
+                // Content script might not be injected yet, try to inject it
+                try {
+                    await this.injectContentScript();
+                } catch (injectError) {
+                    console.log('Content script injection failed:', injectError);
+                }
+            }
+            
+            // Capture screenshot
+            const dataUrl = await chrome.tabs.captureVisibleTab(null, { format: 'png' });
+            
+            const screenshot = {
+                id: Date.now(),
+                timestamp: new Date(),
+                dataUrl: dataUrl,
+                url: tab.url,
+                title: tab.title
+            };
+
+            this.screenshots.push(screenshot);
+            
+            // Associate screenshot with the specific step
+            if (stepIndex >= 0 && stepIndex < this.testSteps.length) {
+                const targetStep = this.testSteps[stepIndex];
+                if (!targetStep.screenshots) {
+                    targetStep.screenshots = [];
+                }
+                targetStep.screenshots.push(screenshot);
+                
+                this.updateStepsList(); // Update steps list to show associated screenshots
+                this.showNotification(`Screenshot associated with Step ${stepIndex + 1}!`, 'success');
+            }
+            
+            this.updateSessionInfo();
+            this.saveData();
+            
+        } catch (error) {
+            console.error('Screenshot error:', error);
             this.showFallbackActions();
         }
     }
@@ -362,15 +414,18 @@ class TestingAssistant {
                 <div class="step-actions">
                     <button class="btn-mini btn-success step-pass-btn" data-index="${index}" title="Mark this step as Pass">✅ Pass</button>
                     <button class="btn-mini btn-danger step-fail-btn" data-index="${index}" title="Mark this step as Fail">❌ Fail</button>
+                    <button class="btn-mini btn-screenshot step-screenshot-btn" data-index="${index}" title="Take Screenshot for this step">📸 Screenshot</button>
                 </div>
             `;
             
             // Add event listeners for step buttons using event delegation
             const passBtn = stepElement.querySelector('.step-pass-btn');
             const failBtn = stepElement.querySelector('.step-fail-btn');
+            const screenshotBtn = stepElement.querySelector('.step-screenshot-btn');
             
             passBtn.addEventListener('click', () => this.markStep(index, 'pass'));
             failBtn.addEventListener('click', () => this.markStep(index, 'fail'));
+            screenshotBtn.addEventListener('click', () => this.takeScreenshotForStep(index));
             
             // Remove click handler and selected state since we're using individual buttons now
             stepsList.appendChild(stepElement);
@@ -570,6 +625,7 @@ class TestingAssistant {
             font-family: monospace; 
             font-size: 14px; 
             resize: vertical; 
+            box-sizing: border-box;
         }
         .modal-actions { 
             margin-top: 15px; 
