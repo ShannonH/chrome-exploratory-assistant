@@ -117,6 +117,16 @@ class TestingAssistant {
         document.getElementById('startSession').style.display = 'inline-flex';
     }
 
+    getSessionStatusMessage(clearData, hasExistingData) {
+        if (clearData) {
+            return 'New testing session started';
+        } else if (hasExistingData) {
+            return 'Session resumed - retaining previous steps';
+        } else {
+            return 'Testing in progress';
+        }
+    }
+
     async startSession(clearData = false) {
         this.currentSession = {
             id: Date.now(),
@@ -125,8 +135,10 @@ class TestingAssistant {
         };
         this.sessionStartTime = Date.now();
         
-        // Only clear data if explicitly requested or if no previous data exists
-        if (clearData || (this.testSteps.length === 0 && this.screenshots.length === 0)) {
+        const hasExistingData = this.testSteps.length > 0 || this.screenshots.length > 0;
+        
+        // Clear data if explicitly requested
+        if (clearData) {
             this.testSteps = [];
             this.screenshots = [];
         }
@@ -138,9 +150,10 @@ class TestingAssistant {
         document.getElementById('testInfo').style.display = 'block';
         document.getElementById('actionButtons').style.display = 'block';
         
-        const statusMessage = clearData ? 'New testing session started' : 
-                             (this.testSteps.length > 0 || this.screenshots.length > 0) ? 
-                             'Session resumed - retaining previous steps' : 'Testing in progress';
+        // Update the steps list to reflect any data changes
+        this.updateStepsList();
+        
+        const statusMessage = this.getSessionStatusMessage(clearData, hasExistingData);
         this.updateStatus(statusMessage, 'warning');
         this.startSessionTimer();
         this.updateSessionInfo();
