@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Session Functionality</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-frame {
+            border: 2px solid #6366f1;
+            border-radius: 8px;
+            margin: 20px 0;
+            width: 400px;
+            height: 600px;
+        }
+        .test-description {
+            background: #f1f5f9;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+        .step {
+            margin: 10px 0;
+            padding: 10px;
+            background: #f8fafc;
+            border-left: 4px solid #6366f1;
+        }
+    </style>
+</head>
+<body>
+    <h1>Testing Session Pause/Resume Functionality</h1>
+    
+    <div class="test-description">
+        <h3>Test Steps to Verify the Fix:</h3>
+        <ol>
+            <li>Open the popup in the iframe below</li>
+            <li>Click "Start Session" (should work normally since no data exists)</li>
+            <li>Add a test step by clicking "Add Step"</li>
+            <li>Click "End Session"</li>
+            <li>Click "Start Session" again</li>
+            <li>Verify that you see "Continue Session" and "New Session" options</li>
+            <li>Test both options to confirm they work correctly</li>
+        </ol>
+    </div>
+
+    <div class="test-description">
+        <h3>Expected Behavior:</h3>
+        <div class="step">
+            <strong>Original Issue:</strong> Steps were always cleared when starting a new session
+        </div>
+        <div class="step">
+            <strong>Fixed Behavior:</strong> User can choose to continue with existing steps or start fresh
+        </div>
+    </div>
+
+    <iframe src="/popup.html" class="test-frame"></iframe>
+
+    <script>
+        // Mock Chrome extension APIs for testing
+        window.chrome = {
+            storage: {
+                local: {
+                    get: function(keys) {
+                        return Promise.resolve({});
+                    },
+                    set: function(data) {
+                        return Promise.resolve();
+                    },
+                    remove: function(keys) {
+                        return Promise.resolve();
+                    }
+                },
+                onChanged: {
+                    addListener: function(callback) {
+                        // Mock implementation
+                    }
+                }
+            },
+            runtime: {
+                getManifest: function() {
+                    return { manifest_version: 3 };
+                },
+                sendMessage: function(message) {
+                    return Promise.resolve({ success: true });
+                }
+            },
+            tabs: {
+                query: function(queryInfo) {
+                    return Promise.resolve([{
+                        id: 1,
+                        url: 'http://localhost:8080/test-page.html',
+                        title: 'Test Page',
+                        windowId: 1
+                    }]);
+                },
+                captureVisibleTab: function(windowId, options) {
+                    return Promise.resolve('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==');
+                },
+                sendMessage: function(tabId, message) {
+                    return Promise.resolve({ success: true });
+                }
+            },
+            scripting: {
+                executeScript: function(options) {
+                    return Promise.resolve([]);
+                }
+            }
+        };
+    </script>
+</body>
+</html>

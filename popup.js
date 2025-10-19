@@ -825,11 +825,29 @@ class TestingAssistant {
             // Script data now stored within testSteps with fromScript flag
         };
         
+        // Mock Chrome storage for testing environment
+        if (!chrome || !chrome.storage) {
+            console.log('Mock saving data:', data);
+            return;
+        }
+        
         chrome.storage.local.set({ testingAssistantData: data });
     }
 
     async loadSavedData() {
         try {
+            // Mock Chrome storage for testing environment
+            if (!chrome || !chrome.storage) {
+                console.warn('Chrome storage not available, using mock data');
+                this.testSteps = [];
+                this.screenshots = [];
+                this.currentSession = null;
+                this.updateStepsList();
+                this.updateExportSummary();
+                this.updateSessionInfo();
+                return;
+            }
+            
             const result = await chrome.storage.local.get('testingAssistantData');
             const data = result.testingAssistantData;
             
