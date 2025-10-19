@@ -281,6 +281,44 @@ body {
     flex: 1;
 }
 
+/* Session Options */
+.session-options {
+    margin-bottom: 20px;
+}
+
+.option-card {
+    background: var(--bg-secondary);
+    border-radius: var(--border-radius);
+    padding: 16px;
+    border: 1px solid var(--border-color);
+}
+
+.option-card p {
+    margin-bottom: 12px;
+    color: var(--text-color);
+    font-size: 14px;
+}
+
+.session-choice {
+    display: flex;
+    gap: 8px;
+    flex-direction: column;
+}
+
+.session-choice .btn {
+    text-align: left;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.session-choice .btn small {
+    font-size: 11px;
+    opacity: 0.8;
+    margin-top: 2px;
+}
+
 /* Info Card */
 .info-card {
     background: var(--bg-secondary);
