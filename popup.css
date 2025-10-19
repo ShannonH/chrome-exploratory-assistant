@@ -35,11 +35,11 @@ body {
     background: var(--bg-primary);
     color: var(--text-primary);
     line-height: 1.5;
-    min-width: 400px !important;
-    width: 400px !important;
-    max-width: 400px !important;
-    min-height: 500px !important;
-    height: 500px !important;
+    min-width: 400px;
+    width: 100%;
+    max-width: 800px;
+    min-height: 300px;
+    height: auto;
     overflow: hidden;
 }
 
@@ -373,7 +373,6 @@ body {
 }
 
 .steps-list {
-    max-height: 200px;
     overflow-y: auto;
 }
 
