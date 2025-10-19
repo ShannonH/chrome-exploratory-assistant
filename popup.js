@@ -281,7 +281,8 @@ class TestingAssistant {
             timestamp: new Date(),
             description: description,
             status: 'in-progress',
-            screenshots: []
+            screenshots: [],
+            pageContext: this.capturePageContext()
         };
 
         this.testSteps.push(step);
@@ -289,6 +290,24 @@ class TestingAssistant {
         this.updateSessionInfo();
         this.hideStepInput();
         this.saveData();
+    }
+
+    capturePageContext() {
+        try {
+            // Try to get current tab information
+            return chrome.tabs.query({ active: true, currentWindow: true }).then(tabs => {
+                if (tabs.length > 0) {
+                    return {
+                        url: tabs[0].url,
+                        title: tabs[0].title,
+                        timestamp: new Date().toISOString()
+                    };
+                }
+                return null;
+            }).catch(() => null);
+        } catch (error) {
+            return null;
+        }
     }
 
     markStep(index, status) {
@@ -472,11 +491,97 @@ class TestingAssistant {
         body { font-family: Arial, sans-serif; margin: 40px; }
         .header { background: #6366f1; color: white; padding: 20px; border-radius: 8px; }
         .section { margin: 20px 0; }
-        .step { border-left: 4px solid #6366f1; padding: 10px; margin: 10px 0; background: #f8fafc; }
+        .step { border-left: 4px solid #6366f1; padding: 10px; margin: 10px 0; background: #f8fafc; position: relative; }
         .step.pass { border-left-color: #10b981; }
         .step.fail { border-left-color: #ef4444; }
         .screenshot { max-width: 100%; height: auto; border: 1px solid #ddd; margin: 10px 0; }
         .timestamp { color: #666; font-size: 0.9em; }
+        .bug-template-btn { 
+            background: #ef4444; 
+            color: white; 
+            border: none; 
+            padding: 8px 12px; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            font-size: 0.85em; 
+            margin-top: 8px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .bug-template-btn:hover { background: #dc2626; }
+        .modal { 
+            display: none; 
+            position: fixed; 
+            z-index: 1000; 
+            left: 0; 
+            top: 0; 
+            width: 100%; 
+            height: 100%; 
+            background-color: rgba(0,0,0,0.5); 
+        }
+        .modal-content { 
+            background-color: #fefefe; 
+            margin: 5% auto; 
+            padding: 20px; 
+            border: none; 
+            border-radius: 8px; 
+            width: 80%; 
+            max-width: 600px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        }
+        .modal-header { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            margin-bottom: 20px; 
+            padding-bottom: 10px; 
+            border-bottom: 1px solid #e5e7eb; 
+        }
+        .modal-title { margin: 0; color: #ef4444; }
+        .close { 
+            color: #aaa; 
+            float: right; 
+            font-size: 28px; 
+            font-weight: bold; 
+            cursor: pointer; 
+        }
+        .close:hover { color: #000; }
+        .bug-template-textarea { 
+            width: 100%; 
+            height: 300px; 
+            border: 1px solid #d1d5db; 
+            border-radius: 4px; 
+            padding: 12px; 
+            font-family: monospace; 
+            font-size: 14px; 
+            resize: vertical; 
+        }
+        .modal-actions { 
+            margin-top: 15px; 
+            display: flex; 
+            gap: 10px; 
+            justify-content: flex-end; 
+        }
+        .btn { 
+            padding: 8px 16px; 
+            border: none; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            font-size: 14px; 
+        }
+        .btn-primary { background: #6366f1; color: white; }
+        .btn-primary:hover { background: #5856eb; }
+        .btn-secondary { background: #6b7280; color: white; }
+        .btn-secondary:hover { background: #4b5563; }
+        .copy-success { 
+            color: #10b981; 
+            font-size: 12px; 
+            margin-left: 8px; 
+            opacity: 0; 
+            transition: opacity 0.3s; 
+        }
+        .copy-success.show { opacity: 1; }
     </style>
 </head>
 <body>
@@ -500,6 +605,11 @@ class TestingAssistant {
                 <h4>Step ${index + 1}: ${step.status.toUpperCase()}</h4>
                 <p>${step.description}</p>
                 ${step.timestamp ? `<div class="timestamp">${this.formatTimestamp(step.timestamp)}</div>` : ''}
+                ${step.status === 'fail' ? `
+                    <button class="bug-template-btn" onclick="openBugTemplate(${index}, '${step.description.replace(/'/g, "\\'")}', '${step.timestamp ? this.formatTimestamp(step.timestamp) : ''}')">
+                        🐛 Create Bug Template
+                    </button>
+                ` : ''}
             </div>
         `).join('')}
     </div>
@@ -518,6 +628,140 @@ class TestingAssistant {
         `).join('')}
     </div>
     ` : ''}
+
+    <!-- Bug Template Modal -->
+    <div id="bugTemplateModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Bug Report Template</h3>
+                <span class="close" onclick="closeBugTemplate()">&times;</span>
+            </div>
+            <textarea id="bugTemplateText" class="bug-template-textarea" placeholder="Loading bug template..."></textarea>
+            <div class="modal-actions">
+                <button class="btn btn-primary" onclick="copyBugTemplate()">📋 Copy to Clipboard</button>
+                <button class="btn btn-secondary" onclick="closeBugTemplate()">Close</button>
+                <span id="copySuccess" class="copy-success">✅ Copied to clipboard!</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function openBugTemplate(stepIndex, stepDescription, timestamp) {
+            const modal = document.getElementById('bugTemplateModal');
+            const textarea = document.getElementById('bugTemplateText');
+            
+            // Try to get captured interactions from sessionStorage
+            let interactionSteps = '';
+            try {
+                const interactions = JSON.parse(sessionStorage.getItem('testingAssistantInteractions') || '[]');
+                if (interactions.length > 0) {
+                    // Get recent interactions (last 10)
+                    const recentInteractions = interactions.slice(-10);
+                    interactionSteps = recentInteractions.map((interaction, index) => {
+                        const actionText = {
+                            'click': 'Clicked',
+                            'submit': 'Submitted',
+                            'change': 'Changed',
+                            'input': 'Entered data in'
+                        }[interaction.type] || 'Interacted with';
+                        
+                        return \`\${index + 1}. \${actionText} \${interaction.element}\`;
+                    }).join('\\n');
+                    
+                    if (interactionSteps) {
+                        interactionSteps = '\\n\\n**Captured User Interactions:**\\n' + interactionSteps;
+                    }
+                }
+            } catch (error) {
+                console.log('Could not retrieve interaction data:', error);
+            }
+            
+            // Generate bug template
+            const template = \`**Bug Report**
+
+**Test Step:** Step \${stepIndex + 1}
+**Description:** \${stepDescription}
+**Timestamp:** \${timestamp}
+**Status:** FAILED
+
+**Summary:** 
+[Brief description of the issue]
+
+**Steps to Reproduce:**
+1. \${stepDescription}
+2. [Add any additional steps]\${interactionSteps}
+
+**Expected Result:**
+[What should have happened]
+
+**Actual Result:**
+[What actually happened]
+
+**Environment:**
+- Browser: \${navigator.userAgent.split(' ')[navigator.userAgent.split(' ').length - 1] || 'Unknown'}
+- URL: \${window.location.origin}
+- Test Date: \${new Date().toLocaleDateString()}
+
+**Additional Information:**
+[Any other relevant details, screenshots, or context]
+
+**Test Data Used:**
+[Username/Password combinations, test data, etc.]
+
+**Priority:** [High/Medium/Low]
+**Severity:** [Critical/Major/Minor]
+\`;
+            
+            textarea.value = template;
+            modal.style.display = 'block';
+            
+            // Focus on the summary section
+            textarea.focus();
+            const summaryIndex = template.indexOf('[Brief description of the issue]');
+            if (summaryIndex !== -1) {
+                textarea.setSelectionRange(summaryIndex, summaryIndex + '[Brief description of the issue]'.length);
+            }
+        }
+        
+        function closeBugTemplate() {
+            document.getElementById('bugTemplateModal').style.display = 'none';
+        }
+        
+        function copyBugTemplate() {
+            const textarea = document.getElementById('bugTemplateText');
+            const copySuccess = document.getElementById('copySuccess');
+            
+            textarea.select();
+            textarea.setSelectionRange(0, 99999); // For mobile devices
+            
+            try {
+                document.execCommand('copy');
+                copySuccess.classList.add('show');
+                setTimeout(() => {
+                    copySuccess.classList.remove('show');
+                }, 2000);
+            } catch (err) {
+                console.error('Failed to copy text: ', err);
+                // Fallback: show the text is selected
+                alert('Text selected! Press Ctrl+C (or Cmd+C on Mac) to copy.');
+            }
+        }
+        
+        // Close modal when clicking outside of it
+        window.onclick = function(event) {
+            const modal = document.getElementById('bugTemplateModal');
+            if (event.target === modal) {
+                closeBugTemplate();
+            }
+        }
+        
+        // Close modal with Escape key
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                closeBugTemplate();
+            }
+        });
+    </script>
 </body>
 </html>
         `;
