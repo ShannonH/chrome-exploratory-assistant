@@ -33,8 +33,10 @@ class TestingAssistant {
         });
 
         // Session controls
-        document.getElementById('startSession').addEventListener('click', () => this.startSession());
+        document.getElementById('startSession').addEventListener('click', () => this.showSessionOptions());
         document.getElementById('endSession').addEventListener('click', () => this.endSession());
+        document.getElementById('continueSession').addEventListener('click', () => this.startSession(false));
+        document.getElementById('newSession').addEventListener('click', () => this.startSession(true));
 
         // Action buttons
         document.getElementById('takeScreenshot').addEventListener('click', () => this.takeScreenshot());
@@ -98,23 +100,48 @@ class TestingAssistant {
         }
     }
 
-    async startSession() {
+    showSessionOptions() {
+        // Check if there's existing data
+        if (this.testSteps.length > 0 || this.screenshots.length > 0) {
+            // Show options to continue or start new
+            document.getElementById('sessionOptions').style.display = 'block';
+            document.getElementById('startSession').style.display = 'none';
+        } else {
+            // No existing data, start new session directly
+            this.startSession(true);
+        }
+    }
+
+    hideSessionOptions() {
+        document.getElementById('sessionOptions').style.display = 'none';
+        document.getElementById('startSession').style.display = 'inline-flex';
+    }
+
+    async startSession(clearData = false) {
         this.currentSession = {
             id: Date.now(),
             startTime: new Date(),
             status: 'active'
         };
         this.sessionStartTime = Date.now();
-        this.testSteps = [];
-        this.screenshots = [];
+        
+        // Only clear data if explicitly requested or if no previous data exists
+        if (clearData || (this.testSteps.length === 0 && this.screenshots.length === 0)) {
+            this.testSteps = [];
+            this.screenshots = [];
+        }
 
-        // Update UI
+        // Hide session options and update UI
+        this.hideSessionOptions();
         document.getElementById('startSession').disabled = true;
         document.getElementById('endSession').disabled = false;
         document.getElementById('testInfo').style.display = 'block';
         document.getElementById('actionButtons').style.display = 'block';
         
-        this.updateStatus('Testing in progress', 'warning');
+        const statusMessage = clearData ? 'New testing session started' : 
+                             (this.testSteps.length > 0 || this.screenshots.length > 0) ? 
+                             'Session resumed - retaining previous steps' : 'Testing in progress';
+        this.updateStatus(statusMessage, 'warning');
         this.startSessionTimer();
         this.updateSessionInfo();
         
@@ -132,8 +159,10 @@ class TestingAssistant {
 
         clearInterval(this.sessionTimer);
         
-        // Update UI
+        // Update UI - reset to initial state
+        this.hideSessionOptions();
         document.getElementById('startSession').disabled = false;
+        document.getElementById('startSession').style.display = 'inline-flex';
         document.getElementById('endSession').disabled = true;
         document.getElementById('actionButtons').style.display = 'none';
         document.getElementById('stepInput').style.display = 'none';
