@@ -5,7 +5,7 @@
  * issue has been resolved in the Chrome Exploratory Assistant extension.
  */
 
-// Simulate the updated timestamp handling logic
+// Simulate the updated timestamp handling logic (UPDATED - NO CONSOLE WARNINGS)
 class TimestampFixDemo {
     normalizeTimestamp(timestamp) {
         if (!timestamp) return null;
@@ -18,9 +18,8 @@ class TimestampFixDemo {
         } else if (typeof timestamp === 'number') {
             return new Date(timestamp > 1000000000000 ? timestamp : timestamp * 1000);
         } else if (typeof timestamp === 'object' && timestamp !== null) {
-            // Check for empty objects first - THIS IS THE KEY FIX
+            // Check for empty objects first - UPDATED: NO CONSOLE WARNING
             if (Object.keys(timestamp).length === 0) {
-                console.warn('Empty object detected as timestamp:', timestamp);
                 return null;
             }
             
@@ -50,8 +49,8 @@ class TimestampFixDemo {
             // KEY FIX: Use normalizeTimestamp instead of duplicating logic
             const normalizedDate = this.normalizeTimestamp(timestamp);
             
+            // UPDATED: NO CONSOLE WARNING for invalid timestamps
             if (!normalizedDate) {
-                console.warn('Invalid timestamp detected:', timestamp, 'Type:', typeof timestamp);
                 return `Invalid timestamp (${typeof timestamp}: ${String(timestamp).substring(0, 50)})`;
             }
             

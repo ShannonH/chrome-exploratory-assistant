@@ -1115,7 +1115,6 @@ class TestingAssistant {
         } else if (typeof timestamp === 'object' && timestamp !== null) {
             // Check for empty objects first
             if (Object.keys(timestamp).length === 0) {
-                console.warn('Empty object detected as timestamp:', timestamp);
                 return null;
             }
             
@@ -1150,7 +1149,6 @@ class TestingAssistant {
             
             // If normalization failed, return an error message
             if (!normalizedDate) {
-                console.warn('Invalid timestamp detected:', timestamp, 'Type:', typeof timestamp);
                 return `Invalid timestamp (${typeof timestamp}: ${String(timestamp).substring(0, 50)})`;
             }
             
