@@ -281,8 +281,8 @@ class SidePanelTestingAssistant {
         if (index >= 0 && index < this.testSteps.length) {
             const currentStatus = this.testSteps[index].status;
             this.testSteps[index].status = status;
-            // Only update the timestamp when the step gets marked with a different status
-            if (currentStatus !== status) {
+            // Only update the timestamp when the step gets marked as pass or fail (not pending/in-progress)
+            if (currentStatus !== status && (status === 'pass' || status === 'fail')) {
                 this.testSteps[index].markedTimestamp = new Date();
             }
             
