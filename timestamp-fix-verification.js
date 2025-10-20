@@ -89,9 +89,27 @@ testCases.forEach(testCase => {
     console.log(`${testCase.name}: ${result}`);
 });
 
+// Test UI rendering fix
+console.log('\n🔍 Testing UI rendering with empty objects:');
+const stepWithEmptyObject = { markedTimestamp: {} };
+const stepWithValidTimestamp = { markedTimestamp: new Date() };
+
+// Simulate the UI condition check
+function shouldRenderTimestamp(step, tester) {
+    return step.markedTimestamp && tester.normalizeTimestamp(step.markedTimestamp);
+}
+
+const shouldRenderEmpty = shouldRenderTimestamp(stepWithEmptyObject, demo);
+const shouldRenderValid = shouldRenderTimestamp(stepWithValidTimestamp, demo);
+
+console.log('Should render empty object timestamp:', shouldRenderEmpty ? 'YES ❌' : 'NO ✅');
+console.log('Should render valid timestamp:', shouldRenderValid ? 'YES ✅' : 'NO ❌');
+
 console.log('\n=== Summary ===');
-console.log('The fix ensures that:');
-console.log('1. Empty objects {} are properly detected and handled');
-console.log('2. No more "Invalid timestamp detected: {} Type: object" warnings');
+console.log('The UPDATED fix ensures that:');
+console.log('1. Empty objects {} are properly detected and handled SILENTLY');
+console.log('2. NO console warnings or errors for invalid timestamps');
 console.log('3. All existing timestamp formats continue to work');
 console.log('4. Consistent behavior between popup.js and sidepanel.js');
+console.log('5. UI only renders timestamps for VALID timestamps');
+console.log('6. User experience is improved - no more console noise OR invalid timestamp messages!');

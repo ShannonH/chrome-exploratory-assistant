@@ -391,7 +391,7 @@ class TestingAssistant {
                     <span class="step-status ${step.status}">${step.status}</span>
                 </div>
                 <div class="step-description">${step.description}</div>
-                ${step.markedTimestamp ? `<div class="step-timestamp">${this.formatTimestamp(step.markedTimestamp)}</div>` : ''}
+                ${step.markedTimestamp && this.normalizeTimestamp(step.markedTimestamp) ? `<div class="step-timestamp">${this.formatTimestamp(step.markedTimestamp)}</div>` : ''}
                 <div class="step-actions">
                     <button class="btn-mini btn-success step-pass-btn" data-index="${index}" title="Mark this step as Pass">✅ Pass</button>
                     <button class="btn-mini btn-danger step-fail-btn" data-index="${index}" title="Mark this step as Fail">❌ Fail</button>
@@ -1224,7 +1224,8 @@ class TestingAssistant {
                         step.timestamp = this.normalizeTimestamp(step.timestamp);
                     }
                     if (step.markedTimestamp) {
-                        step.markedTimestamp = this.normalizeTimestamp(step.markedTimestamp);
+                        const normalized = this.normalizeTimestamp(step.markedTimestamp);
+                        step.markedTimestamp = normalized; // Could be null for invalid timestamps
                     }
                 });
                 

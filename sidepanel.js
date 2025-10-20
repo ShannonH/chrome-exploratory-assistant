@@ -309,7 +309,7 @@ class SidePanelTestingAssistant {
                     <span class="step-status ${step.status}">${step.status}</span>
                 </div>
                 <div class="step-description">${step.description}</div>
-                ${step.markedTimestamp ? `<div class="step-timestamp">${this.formatTimestamp(step.markedTimestamp)}</div>` : ''}
+                ${step.markedTimestamp && this.normalizeTimestamp(step.markedTimestamp) ? `<div class="step-timestamp">${this.formatTimestamp(step.markedTimestamp)}</div>` : ''}
                 <div class="step-actions">
                     <button class="btn btn-mini btn-pass" data-step-index="${index}" title="Mark this step as Pass">✅ Pass</button>
                     <button class="btn btn-mini btn-fail" data-step-index="${index}" title="Mark this step as Fail">❌ Fail</button>
@@ -442,7 +442,8 @@ class SidePanelTestingAssistant {
                         step.timestamp = this.normalizeTimestamp(step.timestamp);
                     }
                     if (step.markedTimestamp) {
-                        step.markedTimestamp = this.normalizeTimestamp(step.markedTimestamp);
+                        const normalized = this.normalizeTimestamp(step.markedTimestamp);
+                        step.markedTimestamp = normalized; // Could be null for invalid timestamps
                     }
                 });
                 
@@ -482,7 +483,8 @@ class SidePanelTestingAssistant {
                         step.timestamp = this.normalizeTimestamp(step.timestamp);
                     }
                     if (step.markedTimestamp) {
-                        step.markedTimestamp = this.normalizeTimestamp(step.markedTimestamp);
+                        const normalized = this.normalizeTimestamp(step.markedTimestamp);
+                        step.markedTimestamp = normalized; // Could be null for invalid timestamps
                     }
                 });
                 shouldUpdate = true;
