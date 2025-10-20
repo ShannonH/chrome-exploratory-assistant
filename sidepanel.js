@@ -270,7 +270,10 @@ class SidePanelTestingAssistant {
             this.testSteps[index].status = status;
             // Only update the timestamp when the step gets marked as pass or fail (not pending/in-progress)
             if (currentStatus !== status && (status === 'pass' || status === 'fail')) {
-                this.testSteps[index].markedTimestamp = new Date();
+                console.log('[DEBUG] Setting markedTimestamp for step', index, 'from', currentStatus, 'to', status);
+                const newTimestamp = new Date();
+                this.testSteps[index].markedTimestamp = newTimestamp;
+                console.log('[DEBUG] markedTimestamp set to:', newTimestamp, 'type:', typeof newTimestamp, 'instanceof Date:', newTimestamp instanceof Date);
             }
             
             this.updateStepsList();
@@ -309,7 +312,7 @@ class SidePanelTestingAssistant {
                     <span class="step-status ${step.status}">${step.status}</span>
                 </div>
                 <div class="step-description">${step.description}</div>
-                ${step.markedTimestamp && this.normalizeTimestamp(step.markedTimestamp) ? `<div class="step-timestamp">${this.formatTimestamp(step.markedTimestamp)}</div>` : ''}
+                ${step.markedTimestamp ? `<div class="step-timestamp">${this.formatTimestamp(step.markedTimestamp)}</div>` : ''}
                 <div class="step-actions">
                     <button class="btn btn-mini btn-pass" data-step-index="${index}" title="Mark this step as Pass">✅ Pass</button>
                     <button class="btn btn-mini btn-fail" data-step-index="${index}" title="Mark this step as Fail">❌ Fail</button>
@@ -368,8 +371,9 @@ class SidePanelTestingAssistant {
         } else if (typeof timestamp === 'number') {
             return new Date(timestamp > 1000000000000 ? timestamp : timestamp * 1000);
         } else if (typeof timestamp === 'object' && timestamp !== null) {
-            // Check for empty objects first
+            // Check for empty objects first - CRITICAL FIX
             if (Object.keys(timestamp).length === 0) {
+                console.warn('[DEBUG] Empty object detected in normalizeTimestamp:', timestamp);
                 return null;
             }
             
@@ -382,6 +386,8 @@ class SidePanelTestingAssistant {
                 const nanoseconds = timestamp._nanoseconds || timestamp.nanoseconds || 0;
                 return new Date(seconds * 1000 + nanoseconds / 1000000);
             } else {
+                // Log what kind of object we're trying to parse
+                console.warn('[DEBUG] Unknown object type in normalizeTimestamp:', timestamp, 'keys:', Object.keys(timestamp));
                 // Try to extract a valid date from the object
                 const date = new Date(timestamp.toString());
                 return isNaN(date.getTime()) ? null : date;
@@ -442,7 +448,9 @@ class SidePanelTestingAssistant {
                         step.timestamp = this.normalizeTimestamp(step.timestamp);
                     }
                     if (step.markedTimestamp) {
+                        console.log('[DEBUG] Normalizing markedTimestamp (loadSavedData):', step.markedTimestamp, 'type:', typeof step.markedTimestamp);
                         const normalized = this.normalizeTimestamp(step.markedTimestamp);
+                        console.log('[DEBUG] Normalized result (loadSavedData):', normalized, 'type:', typeof normalized);
                         step.markedTimestamp = normalized; // Could be null for invalid timestamps
                     }
                 });
@@ -483,7 +491,9 @@ class SidePanelTestingAssistant {
                         step.timestamp = this.normalizeTimestamp(step.timestamp);
                     }
                     if (step.markedTimestamp) {
+                        console.log('[DEBUG] Normalizing markedTimestamp (handleStorageChange):', step.markedTimestamp, 'type:', typeof step.markedTimestamp);
                         const normalized = this.normalizeTimestamp(step.markedTimestamp);
+                        console.log('[DEBUG] Normalized result (handleStorageChange):', normalized, 'type:', typeof normalized);
                         step.markedTimestamp = normalized; // Could be null for invalid timestamps
                     }
                 });
