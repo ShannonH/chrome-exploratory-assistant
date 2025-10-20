@@ -383,14 +383,15 @@ class SidePanelTestingAssistant {
             
             // Verify the date is valid
             if (isNaN(date.getTime())) {
-                console.warn('Invalid timestamp:', timestamp);
-                return 'Invalid timestamp';
+                console.warn('Invalid timestamp detected:', timestamp, 'Type:', typeof timestamp);
+                // Return a more helpful error message showing what we tried to parse
+                return `Invalid timestamp (${typeof timestamp}: ${String(timestamp).substring(0, 50)})`;
             }
             
             return date.toLocaleString();
         } catch (error) {
             console.error('Error formatting timestamp:', error, timestamp);
-            return 'Error formatting timestamp';
+            return `Error formatting timestamp (${typeof timestamp}: ${String(timestamp).substring(0, 50)})`;
         }
     }
 
@@ -415,6 +416,22 @@ class SidePanelTestingAssistant {
                 this.testSteps = data.testSteps || [];
                 this.screenshots = data.screenshots || [];
                 
+                // Convert timestamp strings back to Date objects after loading from storage
+                this.testSteps.forEach(step => {
+                    if (step.timestamp && typeof step.timestamp === 'string') {
+                        step.timestamp = new Date(step.timestamp);
+                    }
+                    if (step.markedTimestamp && typeof step.markedTimestamp === 'string') {
+                        step.markedTimestamp = new Date(step.markedTimestamp);
+                    }
+                });
+                
+                this.screenshots.forEach(screenshot => {
+                    if (screenshot.timestamp && typeof screenshot.timestamp === 'string') {
+                        screenshot.timestamp = new Date(screenshot.timestamp);
+                    }
+                });
+                
                 // Restore UI state
                 this.updateStepsList();
                 this.updateSessionInfo();
@@ -438,11 +455,26 @@ class SidePanelTestingAssistant {
             
             if (newData.testSteps) {
                 this.testSteps = newData.testSteps;
+                // Convert timestamp strings back to Date objects when syncing
+                this.testSteps.forEach(step => {
+                    if (step.timestamp && typeof step.timestamp === 'string') {
+                        step.timestamp = new Date(step.timestamp);
+                    }
+                    if (step.markedTimestamp && typeof step.markedTimestamp === 'string') {
+                        step.markedTimestamp = new Date(step.markedTimestamp);
+                    }
+                });
                 shouldUpdate = true;
             }
             
             if (newData.screenshots) {
                 this.screenshots = newData.screenshots;
+                // Convert timestamp strings back to Date objects when syncing
+                this.screenshots.forEach(screenshot => {
+                    if (screenshot.timestamp && typeof screenshot.timestamp === 'string') {
+                        screenshot.timestamp = new Date(screenshot.timestamp);
+                    }
+                });
                 shouldUpdate = true;
             }
             
