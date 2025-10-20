@@ -207,18 +207,8 @@ class SidePanelTestingAssistant {
     }
 
     updateStatus(text, type = 'ready') {
-        const statusText = document.getElementById('statusText');
-        const statusDot = document.querySelector('.status-dot');
-        
-        statusText.textContent = text;
-        
-        // Update status dot color
-        statusDot.style.background = {
-            'ready': '#10b981',
-            'warning': '#f59e0b',
-            'success': '#10b981',
-            'error': '#ef4444'
-        }[type] || '#10b981';
+        // Status indicator removed from UI - this function is now a no-op
+        // but kept for backward compatibility with existing code
     }
 
     showStepInput() {
@@ -372,8 +362,9 @@ class SidePanelTestingAssistant {
         try {
             let date;
             
+            // If no timestamp is provided, return a placeholder instead of current time
             if (!timestamp) {
-                return new Date().toLocaleString();
+                return 'No timestamp';
             }
             
             // Handle multiple timestamp formats
@@ -393,13 +384,13 @@ class SidePanelTestingAssistant {
             // Verify the date is valid
             if (isNaN(date.getTime())) {
                 console.warn('Invalid timestamp:', timestamp);
-                return new Date().toLocaleString() + ' (now)';
+                return 'Invalid timestamp';
             }
             
             return date.toLocaleString();
         } catch (error) {
             console.error('Error formatting timestamp:', error, timestamp);
-            return new Date().toLocaleString() + ' (fallback)';
+            return 'Error formatting timestamp';
         }
     }
 
