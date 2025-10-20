@@ -33,7 +33,6 @@ class TestingAssistant {
         });
 
         // Action buttons
-        document.getElementById('takeScreenshot').addEventListener('click', () => this.takeScreenshot());
         document.getElementById('addStep').addEventListener('click', () => this.showStepInput());
         document.getElementById('openMainExtension').addEventListener('click', () => this.openMainExtension());
 
