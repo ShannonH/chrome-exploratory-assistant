@@ -132,9 +132,6 @@ class SidePanelTestingAssistant {
             } else if (e.target.classList.contains('step-fail-btn') || e.target.closest('.step-fail-btn')) {
                 const stepIndex = parseInt(e.target.dataset.index || e.target.closest('.step-fail-btn').dataset.index);
                 this.markStep(stepIndex, 'fail');
-            } else if (e.target.classList.contains('step-screenshot-btn') || e.target.closest('.step-screenshot-btn')) {
-                const stepIndex = parseInt(e.target.dataset.index || e.target.closest('.step-screenshot-btn').dataset.index);
-                this.takeScreenshotForStep(stepIndex);
             }
         });
     }
@@ -317,7 +314,6 @@ class SidePanelTestingAssistant {
                 <div class="step-actions">
                     <button class="btn btn-mini btn-success step-pass-btn" data-index="${index}" title="Mark this step as Pass">✅ Pass</button>
                     <button class="btn btn-mini btn-danger step-fail-btn" data-index="${index}" title="Mark this step as Fail">❌ Fail</button>
-                    <button class="btn-mini btn-screenshot step-screenshot-btn" data-index="${index}" title="Take Screenshot for this step">📸 Screenshot</button>
                 </div>
             `;
             
