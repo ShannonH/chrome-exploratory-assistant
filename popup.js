@@ -44,6 +44,7 @@ class TestingAssistant {
         // UI enhancements
         document.getElementById('expandTextarea').addEventListener('click', () => this.toggleTextareaExpansion());
         document.getElementById('toggleCompletedSteps').addEventListener('click', () => this.toggleCompletedSteps());
+        document.getElementById('clearSteps').addEventListener('click', () => this.clearSteps());
 
         // Script tab
         document.getElementById('uploadArea').addEventListener('click', () => {
@@ -901,12 +902,80 @@ class TestingAssistant {
                     this.showNotification('Download failed', 'error');
                 } else {
                     this.showNotification('File downloaded successfully', 'success');
+                    // Mark that a download has occurred for this session
+                    this.markDownloadCompleted();
                 }
             });
         } catch (error) {
             console.error('Download error:', error);
             this.showNotification('Download failed', 'error');
         }
+    }
+
+    markDownloadCompleted() {
+        // Track that a download has been completed for the current session
+        const downloadTime = new Date().toISOString();
+        chrome.storage.local.set({ 
+            lastDownloadTime: downloadTime,
+            hasDownloadedCurrentSession: true 
+        });
+    }
+
+    async checkDownloadStatus() {
+        try {
+            const result = await chrome.storage.local.get(['hasDownloadedCurrentSession', 'lastDownloadTime']);
+            return {
+                hasDownloaded: result.hasDownloadedCurrentSession || false,
+                lastDownloadTime: result.lastDownloadTime || null
+            };
+        } catch (error) {
+            console.error('Error checking download status:', error);
+            return { hasDownloaded: false, lastDownloadTime: null };
+        }
+    }
+
+    clearSteps() {
+        if (this.testSteps.length === 0 && this.screenshots.length === 0) {
+            this.showNotification('No data to clear', 'info');
+            return;
+        }
+
+        this.showClearStepsConfirmDialog();
+    }
+
+    async showClearStepsConfirmDialog() {
+        const downloadStatus = await this.checkDownloadStatus();
+        
+        let message = 'Are you sure you want to clear all test steps and screenshots? This action cannot be undone.';
+        let extraWarning = '';
+        
+        if (!downloadStatus.hasDownloaded && (this.testSteps.length > 0 || this.screenshots.length > 0)) {
+            extraWarning = '\n\n⚠️ WARNING: You haven\'t downloaded a report yet. Consider exporting your data first!';
+        } else if (downloadStatus.hasDownloaded && downloadStatus.lastDownloadTime) {
+            const downloadDate = new Date(downloadStatus.lastDownloadTime);
+            extraWarning = `\n\n✅ Last download: ${downloadDate.toLocaleString()}`;
+        }
+
+        const fullMessage = message + extraWarning;
+        
+        if (confirm(fullMessage)) {
+            this.performClearSteps();
+        }
+    }
+
+    performClearSteps() {
+        this.testSteps = [];
+        this.screenshots = [];
+        
+        // Reset download tracking for new session
+        chrome.storage.local.set({ hasDownloadedCurrentSession: false });
+        
+        this.updateStepsList();
+        this.updateSessionInfo();
+        this.updateExportSummary();
+        this.saveData();
+        
+        this.showNotification('All steps and screenshots cleared', 'success');
     }
 
     clearAllData() {

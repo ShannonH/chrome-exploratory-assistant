@@ -221,11 +221,25 @@ body {
 
 /* Action Buttons */
 .action-buttons {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
+    display: flex;
+    flex-direction: column;
     gap: 8px;
     padding: 0 16px 16px;
     flex-shrink: 0;
+}
+
+/* First row: Screenshot and Add Step */
+.action-buttons-row1 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+/* Second row: Hide Completed and Clear Steps */
+.action-buttons-row2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
 }
 
 .fallback-actions {

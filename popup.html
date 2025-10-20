@@ -60,6 +60,14 @@
                     <span class="btn-icon">➕</span>
                     Add Step
                 </button>
+                <button id="toggleCompletedSteps" class="btn btn-small btn-outline" title="Hide/Show completed steps">
+                    <span class="btn-icon">👁️</span>
+                    Hide Completed
+                </button>
+                <button id="clearSteps" class="btn btn-small btn-danger" title="Clear all test steps">
+                    <span class="btn-icon">🗑️</span>
+                    Clear Steps
+                </button>
             </div>
 
             <div class="fallback-actions" id="fallbackActions" style="display: none;">
@@ -84,10 +92,6 @@
             <div class="recent-steps" id="recentSteps">
                 <div class="steps-header">
                     <h3>Test Steps</h3>
-                    <button id="toggleCompletedSteps" class="btn btn-small btn-outline" title="Hide/Show completed steps">
-                        <span class="btn-icon">👁️</span>
-                        Hide Completed
-                    </button>
                 </div>
                 <div class="steps-list" id="stepsList"></div>
             </div>
