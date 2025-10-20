@@ -176,21 +176,18 @@ class SidePanelTestingAssistant {
         document.getElementById('stepCount').textContent = this.testSteps.length;
         document.getElementById('screenshotCount').textContent = this.screenshots.length;
         
-        // Calculate session time based on step timestamps - find earliest and latest
+        // Calculate session time based on marked step timestamps only
         if (this.testSteps.length > 0) {
-            // Find the earliest timestamp (step creation time)
-            const startTimes = this.testSteps.map(step => new Date(step.timestamp)).filter(date => !isNaN(date));
-            const startTime = startTimes.length > 0 ? new Date(Math.min(...startTimes)) : null;
+            // Find all marked timestamps (when steps were marked as pass/fail)
+            const markedTimes = this.testSteps
+                .filter(step => step.markedTimestamp)
+                .map(step => new Date(step.markedTimestamp))
+                .filter(date => !isNaN(date));
             
-            // Find the latest timestamp (either marked time or creation time)
-            const endTimes = this.testSteps.map(step => {
-                const markedTime = step.markedTimestamp ? new Date(step.markedTimestamp) : null;
-                const createdTime = new Date(step.timestamp);
-                return markedTime && !isNaN(markedTime) ? markedTime : createdTime;
-            }).filter(date => !isNaN(date));
-            const endTime = endTimes.length > 0 ? new Date(Math.max(...endTimes)) : null;
-            
-            if (startTime && endTime) {
+            if (markedTimes.length > 0) {
+                const startTime = new Date(Math.min(...markedTimes));
+                const endTime = new Date(Math.max(...markedTimes));
+                
                 const elapsed = endTime - startTime;
                 const hours = Math.floor(elapsed / 3600000);
                 const minutes = Math.floor((elapsed % 3600000) / 60000);
@@ -312,7 +309,7 @@ class SidePanelTestingAssistant {
                     <span class="step-status ${step.status}">${step.status}</span>
                 </div>
                 <div class="step-description">${step.description}</div>
-                <div class="step-timestamp">${this.formatTimestamp(step.markedTimestamp || step.timestamp)}</div>
+                ${step.markedTimestamp ? `<div class="step-timestamp">${this.formatTimestamp(step.markedTimestamp)}</div>` : ''}
                 <div class="step-actions">
                     <button class="btn btn-mini btn-pass" data-step-index="${index}" title="Mark this step as Pass">✅ Pass</button>
                     <button class="btn btn-mini btn-fail" data-step-index="${index}" title="Mark this step as Fail">❌ Fail</button>
@@ -360,12 +357,14 @@ class SidePanelTestingAssistant {
 
     normalizeTimestamp(timestamp) {
         // Convert various timestamp formats to a proper Date object
-        if (!timestamp) return new Date();
+        // Return null if no valid timestamp exists (don't create fallback dates)
+        if (!timestamp) return null;
         
         if (timestamp instanceof Date) {
             return timestamp;
         } else if (typeof timestamp === 'string') {
-            return new Date(timestamp);
+            const date = new Date(timestamp);
+            return isNaN(date.getTime()) ? null : date;
         } else if (typeof timestamp === 'number') {
             return new Date(timestamp > 1000000000000 ? timestamp : timestamp * 1000);
         } else if (typeof timestamp === 'object' && timestamp !== null) {
@@ -379,12 +378,13 @@ class SidePanelTestingAssistant {
                 return new Date(seconds * 1000 + nanoseconds / 1000000);
             } else {
                 // Try to extract a valid date from the object
-                return new Date(timestamp.toString());
+                const date = new Date(timestamp.toString());
+                return isNaN(date.getTime()) ? null : date;
             }
         }
         
-        // Fallback to current date if we can't parse it
-        return new Date();
+        // Return null if we can't parse it (no fallback date)
+        return null;
     }
 
     formatTimestamp(timestamp) {
@@ -464,14 +464,19 @@ class SidePanelTestingAssistant {
                 
                 // Convert timestamps back to Date objects after loading from storage
                 this.testSteps.forEach(step => {
-                    step.timestamp = this.normalizeTimestamp(step.timestamp);
+                    // Only normalize timestamps if they exist (don't create fallback dates)
+                    if (step.timestamp) {
+                        step.timestamp = this.normalizeTimestamp(step.timestamp);
+                    }
                     if (step.markedTimestamp) {
                         step.markedTimestamp = this.normalizeTimestamp(step.markedTimestamp);
                     }
                 });
                 
                 this.screenshots.forEach(screenshot => {
-                    screenshot.timestamp = this.normalizeTimestamp(screenshot.timestamp);
+                    if (screenshot.timestamp) {
+                        screenshot.timestamp = this.normalizeTimestamp(screenshot.timestamp);
+                    }
                 });
                 
                 // Restore UI state
@@ -499,7 +504,10 @@ class SidePanelTestingAssistant {
                 this.testSteps = newData.testSteps;
                 // Convert timestamps back to Date objects when syncing
                 this.testSteps.forEach(step => {
-                    step.timestamp = this.normalizeTimestamp(step.timestamp);
+                    // Only normalize timestamps if they exist (don't create fallback dates)
+                    if (step.timestamp) {
+                        step.timestamp = this.normalizeTimestamp(step.timestamp);
+                    }
                     if (step.markedTimestamp) {
                         step.markedTimestamp = this.normalizeTimestamp(step.markedTimestamp);
                     }
@@ -511,7 +519,9 @@ class SidePanelTestingAssistant {
                 this.screenshots = newData.screenshots;
                 // Convert timestamps back to Date objects when syncing
                 this.screenshots.forEach(screenshot => {
-                    screenshot.timestamp = this.normalizeTimestamp(screenshot.timestamp);
+                    if (screenshot.timestamp) {
+                        screenshot.timestamp = this.normalizeTimestamp(screenshot.timestamp);
+                    }
                 });
                 shouldUpdate = true;
             }

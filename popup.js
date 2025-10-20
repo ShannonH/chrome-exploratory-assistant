@@ -103,21 +103,18 @@ class TestingAssistant {
         document.getElementById('stepCount').textContent = this.testSteps.length;
         document.getElementById('screenshotCount').textContent = this.screenshots.length;
         
-        // Calculate session time based on step timestamps - find earliest and latest
+        // Calculate session time based on marked step timestamps only
         if (this.testSteps.length > 0) {
-            // Find the earliest timestamp (step creation time)
-            const startTimes = this.testSteps.map(step => new Date(step.timestamp)).filter(date => !isNaN(date));
-            const startTime = startTimes.length > 0 ? new Date(Math.min(...startTimes)) : null;
+            // Find all marked timestamps (when steps were marked as pass/fail)
+            const markedTimes = this.testSteps
+                .filter(step => step.markedTimestamp)
+                .map(step => new Date(step.markedTimestamp))
+                .filter(date => !isNaN(date));
             
-            // Find the latest timestamp (either marked time or creation time)
-            const endTimes = this.testSteps.map(step => {
-                const markedTime = step.markedTimestamp ? new Date(step.markedTimestamp) : null;
-                const createdTime = new Date(step.timestamp);
-                return markedTime && !isNaN(markedTime) ? markedTime : createdTime;
-            }).filter(date => !isNaN(date));
-            const endTime = endTimes.length > 0 ? new Date(Math.max(...endTimes)) : null;
-            
-            if (startTime && endTime) {
+            if (markedTimes.length > 0) {
+                const startTime = new Date(Math.min(...markedTimes));
+                const endTime = new Date(Math.max(...markedTimes));
+                
                 const elapsed = endTime - startTime;
                 const hours = Math.floor(elapsed / 3600000);
                 const minutes = Math.floor((elapsed % 3600000) / 60000);
@@ -324,7 +321,6 @@ class TestingAssistant {
         
         const step = {
             id: Date.now(),
-            timestamp: new Date(),
             description: description,
             status: 'in-progress',
             screenshots: [],
@@ -395,7 +391,7 @@ class TestingAssistant {
                     <span class="step-status ${step.status}">${step.status}</span>
                 </div>
                 <div class="step-description">${step.description}</div>
-                <div class="step-timestamp">${this.formatTimestamp(step.markedTimestamp || step.timestamp)}</div>
+                ${step.markedTimestamp ? `<div class="step-timestamp">${this.formatTimestamp(step.markedTimestamp)}</div>` : ''}
                 <div class="step-actions">
                     <button class="btn-mini btn-success step-pass-btn" data-index="${index}" title="Mark this step as Pass">✅ Pass</button>
                     <button class="btn-mini btn-danger step-fail-btn" data-index="${index}" title="Mark this step as Fail">❌ Fail</button>
@@ -468,7 +464,6 @@ class TestingAssistant {
         scriptSteps.forEach(stepText => {
             const step = {
                 id: Date.now() + Math.random(), // Ensure unique IDs
-                timestamp: new Date(),
                 description: stepText,
                 status: 'pending',
                 screenshots: [],
@@ -499,26 +494,26 @@ class TestingAssistant {
         const includeScreenshots = document.getElementById('includeScreenshots').checked;
         const includeTimestamps = document.getElementById('includeTimestamps').checked;
 
-        // Create session info based on step timestamps since we removed manual session management
+        // Create session info based on marked step timestamps only
         let sessionInfo = null;
         if (this.testSteps.length > 0) {
-            // Find earliest and latest timestamps
-            const startTimes = this.testSteps.map(step => new Date(step.timestamp)).filter(date => !isNaN(date));
-            const endTimes = this.testSteps.map(step => {
-                const markedTime = step.markedTimestamp ? new Date(step.markedTimestamp) : null;
-                const createdTime = new Date(step.timestamp);
-                return markedTime && !isNaN(markedTime) ? markedTime : createdTime;
-            }).filter(date => !isNaN(date));
+            // Find all marked timestamps (when steps were marked as pass/fail)
+            const markedTimes = this.testSteps
+                .filter(step => step.markedTimestamp)
+                .map(step => new Date(step.markedTimestamp))
+                .filter(date => !isNaN(date));
             
-            const startTime = startTimes.length > 0 ? new Date(Math.min(...startTimes)) : null;
-            const endTime = endTimes.length > 0 ? new Date(Math.max(...endTimes)) : null;
-            
-            sessionInfo = {
-                id: `session-${this.testSteps[0]?.id || Date.now()}`,
-                startTime: startTime,
-                endTime: endTime,
-                status: 'completed'
-            };
+            if (markedTimes.length > 0) {
+                const startTime = new Date(Math.min(...markedTimes));
+                const endTime = new Date(Math.max(...markedTimes));
+                
+                sessionInfo = {
+                    id: `session-${this.testSteps[0]?.id || Date.now()}`,
+                    startTime: startTime,
+                    endTime: endTime,
+                    status: 'completed'
+                };
+            }
         }
 
         const exportData = {
@@ -1107,12 +1102,14 @@ class TestingAssistant {
 
     normalizeTimestamp(timestamp) {
         // Convert various timestamp formats to a proper Date object
-        if (!timestamp) return new Date();
+        // Return null if no valid timestamp exists (don't create fallback dates)
+        if (!timestamp) return null;
         
         if (timestamp instanceof Date) {
             return timestamp;
         } else if (typeof timestamp === 'string') {
-            return new Date(timestamp);
+            const date = new Date(timestamp);
+            return isNaN(date.getTime()) ? null : date;
         } else if (typeof timestamp === 'number') {
             return new Date(timestamp > 1000000000000 ? timestamp : timestamp * 1000);
         } else if (typeof timestamp === 'object' && timestamp !== null) {
@@ -1126,12 +1123,13 @@ class TestingAssistant {
                 return new Date(seconds * 1000 + nanoseconds / 1000000);
             } else {
                 // Try to extract a valid date from the object
-                return new Date(timestamp.toString());
+                const date = new Date(timestamp.toString());
+                return isNaN(date.getTime()) ? null : date;
             }
         }
         
-        // Fallback to current date if we can't parse it
-        return new Date();
+        // Return null if we can't parse it (no fallback date)
+        return null;
     }
 
     formatTimestamp(timestamp) {
@@ -1248,14 +1246,19 @@ class TestingAssistant {
                 
                 // Convert timestamps back to Date objects after loading from storage
                 this.testSteps.forEach(step => {
-                    step.timestamp = this.normalizeTimestamp(step.timestamp);
+                    // Only normalize timestamps if they exist (don't create fallback dates)
+                    if (step.timestamp) {
+                        step.timestamp = this.normalizeTimestamp(step.timestamp);
+                    }
                     if (step.markedTimestamp) {
                         step.markedTimestamp = this.normalizeTimestamp(step.markedTimestamp);
                     }
                 });
                 
                 this.screenshots.forEach(screenshot => {
-                    screenshot.timestamp = this.normalizeTimestamp(screenshot.timestamp);
+                    if (screenshot.timestamp) {
+                        screenshot.timestamp = this.normalizeTimestamp(screenshot.timestamp);
+                    }
                 });
                 
                 // Restore UI state
