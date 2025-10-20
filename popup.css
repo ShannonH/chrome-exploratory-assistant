@@ -38,7 +38,7 @@ body {
     min-width: 400px;
     width: 100%;
     max-width: 800px;
-    min-height: 300px;
+    min-height: 450px;
     height: auto;
     overflow: hidden;
 }
@@ -897,6 +897,36 @@ body {
 @keyframes slideIn {
     from { transform: translateX(-100%); }
     to { transform: translateX(0); }
+}
+
+/* Script textarea enhancements */
+.textarea-header {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 8px;
+}
+
+.script-textarea textarea.expanded {
+    height: 300px;
+    max-height: 400px;
+}
+
+/* Steps header with toggle */
+.steps-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.steps-header h3 {
+    margin: 0;
+}
+
+/* Hide completed steps */
+.steps-list.hide-completed .step-item.pass,
+.steps-list.hide-completed .step-item.fail {
+    display: none;
 }
 
 .fade-in {

@@ -32,12 +32,6 @@ class TestingAssistant {
             });
         });
 
-        // Session controls
-        document.getElementById('startSession').addEventListener('click', () => this.showSessionOptions());
-        document.getElementById('endSession').addEventListener('click', () => this.endSession());
-        document.getElementById('continueSession').addEventListener('click', () => this.startSession(false));
-        document.getElementById('newSession').addEventListener('click', () => this.startSession(true));
-
         // Action buttons
         document.getElementById('takeScreenshot').addEventListener('click', () => this.takeScreenshot());
         document.getElementById('addStep').addEventListener('click', () => this.showStepInput());
@@ -46,6 +40,10 @@ class TestingAssistant {
         // Step input
         document.getElementById('saveStep').addEventListener('click', () => this.saveStep());
         document.getElementById('cancelStep').addEventListener('click', () => this.hideStepInput());
+
+        // UI enhancements
+        document.getElementById('expandTextarea').addEventListener('click', () => this.toggleTextareaExpansion());
+        document.getElementById('toggleCompletedSteps').addEventListener('click', () => this.toggleCompletedSteps());
 
         // Script tab
         document.getElementById('uploadArea').addEventListener('click', () => {
@@ -100,114 +98,58 @@ class TestingAssistant {
         }
     }
 
-    showSessionOptions() {
-        // Check if there's existing data
-        if (this.testSteps.length > 0 || this.screenshots.length > 0) {
-            // Show options to continue or start new
-            document.getElementById('sessionOptions').style.display = 'block';
-            document.getElementById('startSession').style.display = 'none';
-        } else {
-            // No existing data, start new session directly
-            this.startSession(true);
-        }
-    }
-
-    hideSessionOptions() {
-        document.getElementById('sessionOptions').style.display = 'none';
-        document.getElementById('startSession').style.display = 'inline-flex';
-    }
-
-    getSessionStatusMessage(clearData, hasExistingData) {
-        if (clearData) {
-            return 'New testing session started';
-        } else if (hasExistingData) {
-            return 'Session resumed - retaining previous steps';
-        } else {
-            return 'Testing in progress';
-        }
-    }
-
-    async startSession(clearData = false) {
-        this.currentSession = {
-            id: Date.now(),
-            startTime: new Date(),
-            status: 'active'
-        };
-        this.sessionStartTime = Date.now();
-        
-        const hasExistingData = this.testSteps.length > 0 || this.screenshots.length > 0;
-        
-        // Clear data if explicitly requested
-        if (clearData) {
-            this.testSteps = [];
-            this.screenshots = [];
-        }
-
-        // Hide session options and update UI
-        this.hideSessionOptions();
-        document.getElementById('startSession').disabled = true;
-        document.getElementById('endSession').disabled = false;
-        document.getElementById('testInfo').style.display = 'block';
-        document.getElementById('actionButtons').style.display = 'block';
-        
-        // Update the steps list to reflect any data changes
-        this.updateStepsList();
-        
-        const statusMessage = this.getSessionStatusMessage(clearData, hasExistingData);
-        this.updateStatus(statusMessage, 'warning');
-        this.startSessionTimer();
-        this.updateSessionInfo();
-        
-        // Inject content script for screenshot capability
-        await this.injectContentScript();
-        
-        this.saveData();
-    }
-
-    endSession() {
-        if (this.currentSession) {
-            this.currentSession.endTime = new Date();
-            this.currentSession.status = 'completed';
-        }
-
-        clearInterval(this.sessionTimer);
-        
-        // Update UI - reset to initial state
-        this.hideSessionOptions();
-        document.getElementById('startSession').disabled = false;
-        document.getElementById('startSession').style.display = 'inline-flex';
-        document.getElementById('endSession').disabled = true;
-        document.getElementById('actionButtons').style.display = 'none';
-        document.getElementById('stepInput').style.display = 'none';
-        
-        this.updateStatus('Session completed', 'success');
-        this.saveData();
-    }
-
-    startSessionTimer() {
-        this.sessionTimer = setInterval(() => {
-            this.updateSessionInfo();
-        }, 1000);
-    }
-
     updateSessionInfo() {
-        // Always show current counts even when session isn't active
+        // Always show current counts
         document.getElementById('stepCount').textContent = this.testSteps.length;
         document.getElementById('screenshotCount').textContent = this.screenshots.length;
         
-        // Only update timer if there's an active session
-        if (!this.sessionStartTime || !this.currentSession || this.currentSession.status !== 'active') {
+        // Calculate session time based on step timestamps
+        if (this.testSteps.length > 0) {
+            const firstStep = this.testSteps[0];
+            const lastStep = this.testSteps[this.testSteps.length - 1];
+            const startTime = firstStep.timestamp;
+            const endTime = lastStep.markedTimestamp || lastStep.timestamp;
+            
+            if (startTime && endTime) {
+                const elapsed = new Date(endTime) - new Date(startTime);
+                const hours = Math.floor(elapsed / 3600000);
+                const minutes = Math.floor((elapsed % 3600000) / 60000);
+                const seconds = Math.floor((elapsed % 60000) / 1000);
+                
+                document.getElementById('sessionTime').textContent = 
+                    `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            } else {
+                document.getElementById('sessionTime').textContent = '00:00:00';
+            }
+        } else {
             document.getElementById('sessionTime').textContent = '00:00:00';
-            return;
         }
+    }
 
-        const elapsed = Date.now() - this.sessionStartTime;
-        const hours = Math.floor(elapsed / 3600000);
-        const minutes = Math.floor((elapsed % 3600000) / 60000);
-        const seconds = Math.floor((elapsed % 60000) / 1000);
+    toggleTextareaExpansion() {
+        const textarea = document.getElementById('scriptText');
+        const button = document.getElementById('expandTextarea');
+        
+        if (textarea.classList.contains('expanded')) {
+            textarea.classList.remove('expanded');
+            button.innerHTML = '<span class="btn-icon">🔍</span> Expand';
+        } else {
+            textarea.classList.add('expanded');
+            button.innerHTML = '<span class="btn-icon">🔼</span> Collapse';
+        }
+    }
 
-        document.getElementById('sessionTime').textContent = 
-            `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    toggleCompletedSteps() {
+        const stepsList = document.getElementById('stepsList');
+        const button = document.getElementById('toggleCompletedSteps');
+        
+        if (stepsList.classList.contains('hide-completed')) {
+            stepsList.classList.remove('hide-completed');
+            button.innerHTML = '<span class="btn-icon">👁️</span> Hide Completed';
+        } else {
+            stepsList.classList.add('hide-completed');
+            button.innerHTML = '<span class="btn-icon">👁️‍🗨️</span> Show Completed';
+        }
     }
 
     updateStatus(text, type = 'ready') {
@@ -420,6 +362,8 @@ class TestingAssistant {
         if (index >= 0 && index < this.testSteps.length) {
             const currentStatus = this.testSteps[index].status;
             this.testSteps[index].status = status;
+            // Update the timestamp when the step gets marked (not when it was added)
+            this.testSteps[index].markedTimestamp = new Date();
             this.updateStepsList();
             this.saveData();
             
@@ -452,7 +396,7 @@ class TestingAssistant {
                     <span class="step-status ${step.status}">${step.status}</span>
                 </div>
                 <div class="step-description">${step.description}</div>
-                <div class="step-timestamp">${this.formatTimestamp(step.timestamp)}</div>
+                <div class="step-timestamp">${this.formatTimestamp(step.markedTimestamp || step.timestamp)}</div>
                 <div class="step-actions">
                     <button class="btn-mini btn-success step-pass-btn" data-index="${index}" title="Mark this step as Pass">✅ Pass</button>
                     <button class="btn-mini btn-danger step-fail-btn" data-index="${index}" title="Mark this step as Fail">❌ Fail</button>
@@ -513,11 +457,6 @@ class TestingAssistant {
         if (!scriptText) {
             this.showNotification('Please enter or upload a script', 'warning');
             return;
-        }
-
-        // Check if there's an active session, if not start one
-        if (!this.currentSession || this.currentSession.status !== 'active') {
-            await this.startSession();
         }
 
         // Parse script into test steps and add them to the main test steps

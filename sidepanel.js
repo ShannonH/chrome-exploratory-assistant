@@ -120,6 +120,9 @@ class SidePanelTestingAssistant {
         document.getElementById('saveStep').addEventListener('click', () => this.saveStep());
         document.getElementById('cancelStep').addEventListener('click', () => this.hideStepInput());
 
+        // Toggle completed steps
+        document.getElementById('toggleCompletedSteps').addEventListener('click', () => this.toggleCompletedSteps());
+
         // Add event delegation for step action buttons
         document.getElementById('stepsList').addEventListener('click', (e) => {
             if (e.target.classList.contains('btn-pass') || e.target.closest('.btn-pass')) {
@@ -173,15 +176,24 @@ class SidePanelTestingAssistant {
         document.getElementById('stepCount').textContent = this.testSteps.length;
         document.getElementById('screenshotCount').textContent = this.screenshots.length;
         
-        // Calculate session time based on actual step activity
-        if (this.currentSession && this.currentSession.startTime && this.currentSession.endTime) {
-            const elapsed = new Date(this.currentSession.endTime).getTime() - new Date(this.currentSession.startTime).getTime();
-            const hours = Math.floor(elapsed / 3600000);
-            const minutes = Math.floor((elapsed % 3600000) / 60000);
-            const seconds = Math.floor((elapsed % 60000) / 1000);
-
-            document.getElementById('sessionTime').textContent = 
-                `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        // Calculate session time based on step timestamps
+        if (this.testSteps.length > 0) {
+            const firstStep = this.testSteps[0];
+            const lastStep = this.testSteps[this.testSteps.length - 1];
+            const startTime = firstStep.timestamp;
+            const endTime = lastStep.markedTimestamp || lastStep.timestamp;
+            
+            if (startTime && endTime) {
+                const elapsed = new Date(endTime) - new Date(startTime);
+                const hours = Math.floor(elapsed / 3600000);
+                const minutes = Math.floor((elapsed % 3600000) / 60000);
+                const seconds = Math.floor((elapsed % 60000) / 1000);
+                
+                document.getElementById('sessionTime').textContent = 
+                    `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            } else {
+                document.getElementById('sessionTime').textContent = '00:00:00';
+            }
         } else {
             document.getElementById('sessionTime').textContent = '00:00:00';
         }
@@ -262,13 +274,8 @@ class SidePanelTestingAssistant {
         if (index >= 0 && index < this.testSteps.length) {
             const currentStatus = this.testSteps[index].status;
             this.testSteps[index].status = status;
-            this.testSteps[index].timestamp = new Date(); // Update timestamp on each action
-            
-            // Initialize session automatically if needed
-            this.initializeSession();
-            
-            // Update session timing based on step activity
-            this.autoUpdateSessionTiming();
+            // Update the timestamp when the step gets marked (not when it was added)
+            this.testSteps[index].markedTimestamp = new Date();
             
             this.updateStepsList();
             this.updateSessionInfo();
@@ -306,7 +313,7 @@ class SidePanelTestingAssistant {
                     <span class="step-status ${step.status}">${step.status}</span>
                 </div>
                 <div class="step-description">${step.description}</div>
-                <div class="step-timestamp">${this.formatTimestamp(step.timestamp)}</div>
+                <div class="step-timestamp">${this.formatTimestamp(step.markedTimestamp || step.timestamp)}</div>
                 <div class="step-actions">
                     <button class="btn btn-mini btn-pass" data-step-index="${index}" title="Mark this step as Pass">✅ Pass</button>
                     <button class="btn btn-mini btn-fail" data-step-index="${index}" title="Mark this step as Fail">❌ Fail</button>
@@ -338,6 +345,19 @@ class SidePanelTestingAssistant {
     // Remove all script and export related methods and just keep the comment
     
     // Script and export functionality is handled in the main extension popup
+
+    toggleCompletedSteps() {
+        const stepsList = document.getElementById('stepsList');
+        const button = document.getElementById('toggleCompletedSteps');
+        
+        if (stepsList.classList.contains('hide-completed')) {
+            stepsList.classList.remove('hide-completed');
+            button.innerHTML = '<span class="btn-icon">👁️</span> Hide Completed';
+        } else {
+            stepsList.classList.add('hide-completed');
+            button.innerHTML = '<span class="btn-icon">👁️‍🗨️</span> Show Completed';
+        }
+    }
 
     formatTimestamp(timestamp) {
         try {
