@@ -2,8 +2,7 @@
 class SidePanelTestingAssistant {
     constructor() {
         this.currentSession = null;
-        this.sessionStartTime = null;
-        this.sessionTimer = null;
+        this.sessionStartTime = null; // For backward compatibility with timing calculations
         this.syncCheckInterval = null;
         this.testSteps = [];
         this.screenshots = [];
@@ -102,26 +101,9 @@ class SidePanelTestingAssistant {
                     this.updateStepsList();
                     this.updateSessionInfo();
                     
-                    // Update session UI state
-                    if (this.currentSession && this.currentSession.status === 'active') {
-                        this.sessionStartTime = new Date(this.currentSession.startTime).getTime();
-                        document.getElementById('startSession').disabled = true;
-                        document.getElementById('endSession').disabled = false;
-                        document.getElementById('testInfo').style.display = 'block';
-                        document.getElementById('actionButtons').style.display = 'block';
-                        this.updateStatus('Testing in progress', 'warning');
-                        if (!this.sessionTimer) {
-                            this.startSessionTimer();
-                        }
-                    } else {
-                        document.getElementById('startSession').disabled = false;
-                        document.getElementById('endSession').disabled = true;
-                        this.updateStatus('Ready', 'ready');
-                        if (this.sessionTimer) {
-                            clearInterval(this.sessionTimer);
-                            this.sessionTimer = null;
-                        }
-                    }
+                    // Session is now managed automatically based on step activity
+                    document.getElementById('testInfo').style.display = 'block';
+                    this.updateStatus('Ready', 'ready');
                 }
             }
         } catch (error) {
@@ -130,13 +112,9 @@ class SidePanelTestingAssistant {
     }
 
     initializeUI() {
-        // Session controls
-        document.getElementById('startSession').addEventListener('click', () => this.startSession());
-        document.getElementById('endSession').addEventListener('click', () => this.endSession());
-
-        // Action buttons
-        document.getElementById('addStep').addEventListener('click', () => this.showStepInput());
-        document.getElementById('openMainExtension').addEventListener('click', () => this.openMainExtension());
+        // Remove session controls - sessions are now automatic
+        
+        // Remove action buttons - steps are managed automatically
 
         // Step input
         document.getElementById('saveStep').addEventListener('click', () => this.saveStep());
@@ -154,74 +132,59 @@ class SidePanelTestingAssistant {
         });
     }
 
-    async startSession() {
-        this.currentSession = {
-            id: Date.now(),
-            startTime: new Date(),
-            status: 'active'
-        };
-        this.sessionStartTime = Date.now();
-        this.testSteps = [];
-        this.screenshots = [];
-
-        // Update UI
-        document.getElementById('startSession').disabled = true;
-        document.getElementById('endSession').disabled = false;
-        document.getElementById('testInfo').style.display = 'block';
-        document.getElementById('actionButtons').style.display = 'block';
-        
-        this.updateStatus('Testing in progress', 'warning');
-        this.startSessionTimer();
-        this.updateSessionInfo();
-        
-        // Inject content script for screenshot capability
-        await this.injectContentScript();
-        
-        this.saveData();
+    // Automatic session management - no manual start/stop
+    initializeSession() {
+        if (!this.currentSession) {
+            this.currentSession = {
+                id: Date.now(),
+                startTime: null, // Will be set on first step action
+                endTime: null,   // Will be updated on each step action
+                status: 'active'
+            };
+        }
     }
 
-    endSession() {
-        if (this.currentSession) {
-            this.currentSession.endTime = new Date();
-            this.currentSession.status = 'completed';
+    autoUpdateSessionTiming() {
+        if (this.testSteps.length === 0) {
+            return; // No steps yet
         }
 
-        clearInterval(this.sessionTimer);
+        // Find earliest step timestamp for start time
+        const stepTimestamps = this.testSteps
+            .filter(step => step.timestamp)
+            .map(step => new Date(step.timestamp));
         
-        // Update UI
-        document.getElementById('startSession').disabled = false;
-        document.getElementById('endSession').disabled = true;
-        document.getElementById('actionButtons').style.display = 'none';
-        document.getElementById('stepInput').style.display = 'none';
-        
-        this.updateStatus('Session completed', 'success');
-        this.saveData();
-    }
-
-    startSessionTimer() {
-        this.sessionTimer = setInterval(() => {
-            this.updateSessionInfo();
-        }, 1000);
+        if (stepTimestamps.length > 0) {
+            const earliestTime = new Date(Math.min(...stepTimestamps));
+            const latestTime = new Date(Math.max(...stepTimestamps));
+            
+            if (!this.currentSession.startTime) {
+                this.currentSession.startTime = earliestTime;
+                this.sessionStartTime = earliestTime.getTime();
+            }
+            
+            // Always update end time to latest step action
+            this.currentSession.endTime = latestTime;
+        }
     }
 
     updateSessionInfo() {
-        // Always show current counts even when session isn't active
+        // Always show current counts
         document.getElementById('stepCount').textContent = this.testSteps.length;
         document.getElementById('screenshotCount').textContent = this.screenshots.length;
         
-        // Only update timer if there's an active session
-        if (!this.sessionStartTime || !this.currentSession || this.currentSession.status !== 'active') {
+        // Calculate session time based on actual step activity
+        if (this.currentSession && this.currentSession.startTime && this.currentSession.endTime) {
+            const elapsed = new Date(this.currentSession.endTime).getTime() - new Date(this.currentSession.startTime).getTime();
+            const hours = Math.floor(elapsed / 3600000);
+            const minutes = Math.floor((elapsed % 3600000) / 60000);
+            const seconds = Math.floor((elapsed % 60000) / 1000);
+
+            document.getElementById('sessionTime').textContent = 
+                `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        } else {
             document.getElementById('sessionTime').textContent = '00:00:00';
-            return;
         }
-
-        const elapsed = Date.now() - this.sessionStartTime;
-        const hours = Math.floor(elapsed / 3600000);
-        const minutes = Math.floor((elapsed % 3600000) / 60000);
-        const seconds = Math.floor((elapsed % 60000) / 1000);
-
-        document.getElementById('sessionTime').textContent = 
-            `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
     }
 
     updateStatus(text, type = 'ready') {
@@ -237,21 +200,6 @@ class SidePanelTestingAssistant {
             'success': '#10b981',
             'error': '#ef4444'
         }[type] || '#10b981';
-    }
-
-    async openMainExtension() {
-        try {
-            // Try to open the main extension popup
-            if (chrome && chrome.action && chrome.action.openPopup) {
-                await chrome.action.openPopup();
-            } else {
-                // Fallback: show instructions
-                this.showNotification('Please click the extension icon in Chrome toolbar to access screenshot functionality.', 'info');
-            }
-        } catch (error) {
-            // Fallback: show instructions
-            this.showNotification('Please click the extension icon in Chrome toolbar to access screenshot functionality.', 'info');
-        }
     }
 
     showStepInput() {
@@ -277,6 +225,13 @@ class SidePanelTestingAssistant {
         };
 
         this.testSteps.push(step);
+        
+        // Initialize session automatically if needed
+        this.initializeSession();
+        
+        // Update session timing based on step activity
+        this.autoUpdateSessionTiming();
+        
         this.updateStepsList();
         this.updateSessionInfo();
         this.hideStepInput();
@@ -307,7 +262,16 @@ class SidePanelTestingAssistant {
         if (index >= 0 && index < this.testSteps.length) {
             const currentStatus = this.testSteps[index].status;
             this.testSteps[index].status = status;
+            this.testSteps[index].timestamp = new Date(); // Update timestamp on each action
+            
+            // Initialize session automatically if needed
+            this.initializeSession();
+            
+            // Update session timing based on step activity
+            this.autoUpdateSessionTiming();
+            
             this.updateStepsList();
+            this.updateSessionInfo();
             this.saveData();
             
             // Provide clear feedback about the status change
@@ -324,7 +288,7 @@ class SidePanelTestingAssistant {
         stepsList.innerHTML = '';
 
         if (this.testSteps.length === 0) {
-            stepsList.innerHTML = '<div class="no-steps">No test steps yet. Start a session and add some steps!</div>';
+            stepsList.innerHTML = '<div class="no-steps">No test steps yet. Add some steps to get started!</div>';
             return;
         }
 
@@ -334,10 +298,11 @@ class SidePanelTestingAssistant {
             
             const stepNumber = index + 1;
             const scriptIndicator = step.fromScript ? '📋 ' : '';
+            const screenshotIndicator = (step.screenshots && step.screenshots.length > 0) ? ` 📸${step.screenshots.length}` : '';
             
             stepElement.innerHTML = `
                 <div class="step-header">
-                    <span class="step-number">${scriptIndicator}Step ${stepNumber}</span>
+                    <span class="step-number">${scriptIndicator}Step ${stepNumber}${screenshotIndicator}</span>
                     <span class="step-status ${step.status}">${step.status}</span>
                 </div>
                 <div class="step-description">${step.description}</div>
@@ -362,6 +327,12 @@ class SidePanelTestingAssistant {
         } catch (error) {
             console.error('Failed to inject content script:', error);
         }
+    }
+
+    showNotification(message, type = 'info') {
+        // Simple notification implementation for sidepanel
+        console.log(`[${type.toUpperCase()}] ${message}`);
+        // You could implement a more sophisticated notification here
     }
 
     // Remove all script and export related methods and just keep the comment
@@ -426,21 +397,11 @@ class SidePanelTestingAssistant {
                 
                 // Restore UI state
                 this.updateStepsList();
-                
-                // Check if there's an active session
-                if (this.currentSession && this.currentSession.status === 'active') {
-                    this.sessionStartTime = new Date(this.currentSession.startTime).getTime();
-                    document.getElementById('startSession').disabled = true;
-                    document.getElementById('endSession').disabled = false;
-                    document.getElementById('testInfo').style.display = 'block';
-                    document.getElementById('actionButtons').style.display = 'block';
-                    this.updateStatus('Testing in progress', 'warning');
-                    this.startSessionTimer();
-                    this.updateSessionInfo(); // Immediately update to show current values
-                }
-                
-                // Always update session info to show current counts
                 this.updateSessionInfo();
+                
+                // Session is now managed automatically
+                document.getElementById('testInfo').style.display = 'block';
+                this.updateStatus('Ready', 'ready');
             }
         } catch (error) {
             console.error('Failed to load saved data:', error);
@@ -466,51 +427,9 @@ class SidePanelTestingAssistant {
             }
             
             if (newData.currentSession) {
-                const previousSessionStatus = this.currentSession ? this.currentSession.status : null;
                 this.currentSession = newData.currentSession;
-                
-                // Update session UI state if session status changed
-                if (this.currentSession && this.currentSession.status === 'active' && this.currentSession.startTime) {
-                    this.sessionStartTime = new Date(this.currentSession.startTime).getTime();
-                    
-                    // Update UI to reflect active session
-                    document.getElementById('startSession').disabled = true;
-                    document.getElementById('endSession').disabled = false;
-                    document.getElementById('testInfo').style.display = 'block';
-                    document.getElementById('actionButtons').style.display = 'block';
-                    this.updateStatus('Testing in progress', 'warning');
-                    
-                    if (!this.sessionTimer) {
-                        this.startSessionTimer();
-                    }
-                    shouldUpdateUI = true;
-                } else if (this.currentSession && this.currentSession.status === 'completed') {
-                    // Handle session completion
-                    if (this.sessionTimer) {
-                        clearInterval(this.sessionTimer);
-                        this.sessionTimer = null;
-                    }
-                    
-                    // Update UI to reflect completed session
-                    document.getElementById('startSession').disabled = false;
-                    document.getElementById('endSession').disabled = true;
-                    document.getElementById('actionButtons').style.display = 'none';
-                    this.updateStatus('Session completed', 'success');
-                    shouldUpdateUI = true;
-                } else {
-                    // No active session
-                    if (this.sessionTimer) {
-                        clearInterval(this.sessionTimer);
-                        this.sessionTimer = null;
-                    }
-                    
-                    document.getElementById('startSession').disabled = false;
-                    document.getElementById('endSession').disabled = true;
-                    this.updateStatus('Ready', 'ready');
-                    shouldUpdateUI = true;
-                }
-                
                 shouldUpdate = true;
+                shouldUpdateUI = true;
             }
         }
 

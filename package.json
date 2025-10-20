@@ -1,0 +1,12 @@
+{
+  "name": "chrome-exploratory-assistant",
+  "version": "1.0.0",
+  "description": "A powerful Chrome extension that helps QA engineers and testers document test cases, capture screenshots, and manage exploratory testing sessions with ease.",
+  "main": "background.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}

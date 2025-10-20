@@ -446,15 +446,54 @@ class ContentScriptHandler {
         // This could be used to automatically suggest test steps based on user interactions
         const element = event.target;
         const selector = this.getElementSelector(element);
-        const interaction = {
+        
+        // Capture additional context for different interaction types
+        let interactionData = {
             type: event.type,
             element: selector,
+            tagName: element.tagName.toLowerCase(),
             timestamp: new Date().toISOString(),
             url: window.location.href
         };
-        
+
+        // Capture form submission data (without sensitive information)
+        if (event.type === 'submit' && element.tagName.toLowerCase() === 'form') {
+            const formData = new FormData(element);
+            const fields = [];
+            for (let [key, value] of formData.entries()) {
+                // Don't capture actual password values, just indicate password field was used
+                if (key.toLowerCase().includes('password') || element.querySelector(`[name="${key}"][type="password"]`)) {
+                    fields.push(`${key}: [password field]`);
+                } else if (key.toLowerCase().includes('username') || key.toLowerCase().includes('email')) {
+                    // Capture username/email patterns but not actual values for privacy
+                    fields.push(`${key}: [${value.length > 0 ? 'entered' : 'empty'}]`);
+                } else {
+                    // For other fields, just indicate if they were filled
+                    fields.push(`${key}: [${value ? 'filled' : 'empty'}]`);
+                }
+            }
+            interactionData.formFields = fields;
+        }
+
+        // Capture input values for certain field types (non-sensitive)
+        if (event.type === 'change') {
+            if (element.tagName.toLowerCase() === 'input') {
+                const inputType = element.type.toLowerCase();
+                if (['radio', 'checkbox'].includes(inputType)) {
+                    interactionData.value = element.value;
+                    interactionData.checked = element.checked;
+                } else if (!['password'].includes(inputType)) {
+                    // For non-password fields, just indicate if filled
+                    interactionData.hasValue = element.value.length > 0;
+                }
+            } else if (element.tagName.toLowerCase() === 'select') {
+                interactionData.value = element.value;
+                interactionData.selectedIndex = element.selectedIndex;
+            }
+        }
+
         // Store interaction for potential step suggestions
-        this.storeInteraction(interaction);
+        this.storeInteraction(interactionData);
     }
 
     storeInteraction(interaction) {
