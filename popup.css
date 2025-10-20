@@ -5,7 +5,7 @@
     --secondary-color: #64748b;
     --accent-color: #0ea5e9;
     --success-color: #10b981;
-    --danger-color: #ef4444;
+    --danger-color: #f59e0b;
     --warning-color: #f59e0b;
 
     --bg-primary: #ffffff;
@@ -235,7 +235,7 @@ body {
 }
 
 .btn-danger:hover:not(:disabled) {
-    background: #dc2626;
+    background: #d97706;
 }
 
 .btn-outline {
@@ -347,7 +347,7 @@ body {
 /* Action Buttons */
 .action-buttons {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr 1fr 1fr;
     gap: 8px;
     margin-bottom: 16px;
 }
@@ -545,13 +545,13 @@ body {
 }
 
 .btn-mini.btn-danger {
-    background: #ef4444;
+    background: #f59e0b;
     color: white;
-    border-color: #dc2626;
+    border-color: #d97706;
 }
 
 .btn-mini.btn-danger:hover {
-    background: #dc2626;
+    background: #d97706;
 }
 
 .btn-mini.btn-outline {

@@ -34,6 +34,36 @@
             </div>
         </div>
 
+        <div class="action-buttons" id="actionButtons" style="display: block;">
+            <div class="action-buttons-row1">
+                <button id="addStep" class="btn btn-outline">
+                    <span class="btn-icon">📝</span>
+                    Add Step
+                </button>
+                <button id="toggleCompletedSteps" class="btn btn-outline" title="Hide/Show completed steps">
+                    <span class="btn-icon">👁️</span>
+                    Hide Completed
+                </button>
+            </div>
+            <div class="action-buttons-row2">
+                <button id="clearSteps" class="btn btn-danger" title="Clear all test steps">
+                    <span class="btn-icon">🧹</span>
+                    Clear Steps
+                </button>
+            </div>
+        </div>
+
+        <div class="fallback-actions" id="fallbackActions" style="display: none;">
+            <div class="info-message">
+                <span class="btn-icon">ℹ️</span>
+                Screenshots only work from the main extension popup
+            </div>
+            <button id="openMainExtension" class="btn btn-primary">
+                <span class="btn-icon">🔗</span>
+                Open Main Extension
+            </button>
+        </div>
+
         <div class="step-input" id="stepInput" style="display: none;">
             <textarea id="stepDescription" placeholder="Describe this test step..."></textarea>
             <div class="step-actions">
@@ -45,10 +75,6 @@
         <div class="test-steps-section">
             <div class="section-header">
                 <h3>Test Steps</h3>
-                <button id="toggleCompletedSteps" class="btn btn-small btn-outline" title="Hide/Show completed steps">
-                    <span class="btn-icon">👁️</span>
-                    Hide Completed
-                </button>
             </div>
             <div class="steps-list" id="stepsList"></div>
         </div>

@@ -52,13 +52,17 @@
             </div>
 
             <div class="action-buttons" id="actionButtons" style="display: block;">
-                <button id="takeScreenshot" class="btn btn-accent">
-                    <span class="btn-icon">📸</span>
-                    Screenshot
-                </button>
                 <button id="addStep" class="btn btn-outline">
-                    <span class="btn-icon">➕</span>
+                    <span class="btn-icon">📝</span>
                     Add Step
+                </button>
+                <button id="toggleCompletedSteps" class="btn btn-outline" title="Hide/Show completed steps">
+                    <span class="btn-icon">👁️</span>
+                    Hide Completed
+                </button>
+                <button id="clearSteps" class="btn btn-danger" title="Clear all test steps">
+                    <span class="btn-icon">🧹</span>
+                    Clear Steps
                 </button>
             </div>
 
@@ -84,10 +88,6 @@
             <div class="recent-steps" id="recentSteps">
                 <div class="steps-header">
                     <h3>Test Steps</h3>
-                    <button id="toggleCompletedSteps" class="btn btn-small btn-outline" title="Hide/Show completed steps">
-                        <span class="btn-icon">👁️</span>
-                        Hide Completed
-                    </button>
                 </div>
                 <div class="steps-list" id="stepsList"></div>
             </div>

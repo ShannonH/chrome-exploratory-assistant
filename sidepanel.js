@@ -112,24 +112,25 @@ class SidePanelTestingAssistant {
     }
 
     initializeUI() {
-        // Remove session controls - sessions are now automatic
-        
-        // Remove action buttons - steps are managed automatically
+        // Action buttons
+        document.getElementById('addStep').addEventListener('click', () => this.showStepInput());
+        document.getElementById('openMainExtension').addEventListener('click', () => this.openMainExtension());
 
         // Step input
         document.getElementById('saveStep').addEventListener('click', () => this.saveStep());
         document.getElementById('cancelStep').addEventListener('click', () => this.hideStepInput());
 
-        // Toggle completed steps
+        // Toggle completed steps and clear steps
         document.getElementById('toggleCompletedSteps').addEventListener('click', () => this.toggleCompletedSteps());
+        document.getElementById('clearSteps').addEventListener('click', () => this.clearSteps());
 
         // Add event delegation for step action buttons
         document.getElementById('stepsList').addEventListener('click', (e) => {
-            if (e.target.classList.contains('btn-pass') || e.target.closest('.btn-pass')) {
-                const stepIndex = parseInt(e.target.dataset.stepIndex || e.target.closest('.btn-pass').dataset.stepIndex);
+            if (e.target.classList.contains('step-pass-btn') || e.target.closest('.step-pass-btn')) {
+                const stepIndex = parseInt(e.target.dataset.index || e.target.closest('.step-pass-btn').dataset.index);
                 this.markStep(stepIndex, 'pass');
-            } else if (e.target.classList.contains('btn-fail') || e.target.closest('.btn-fail')) {
-                const stepIndex = parseInt(e.target.dataset.stepIndex || e.target.closest('.btn-fail').dataset.stepIndex);
+            } else if (e.target.classList.contains('step-fail-btn') || e.target.closest('.step-fail-btn')) {
+                const stepIndex = parseInt(e.target.dataset.index || e.target.closest('.step-fail-btn').dataset.index);
                 this.markStep(stepIndex, 'fail');
             }
         });
@@ -311,8 +312,8 @@ class SidePanelTestingAssistant {
                 <div class="step-description">${step.description}</div>
                 ${step.markedTimestamp ? `<div class="step-timestamp">${this.formatTimestamp(step.markedTimestamp)}</div>` : ''}
                 <div class="step-actions">
-                    <button class="btn btn-mini btn-pass" data-step-index="${index}" title="Mark this step as Pass">✅ Pass</button>
-                    <button class="btn btn-mini btn-fail" data-step-index="${index}" title="Mark this step as Fail">❌ Fail</button>
+                    <button class="btn btn-mini btn-success step-pass-btn" data-index="${index}" title="Mark this step as Pass">✅ Pass</button>
+                    <button class="btn btn-mini btn-danger step-fail-btn" data-index="${index}" title="Mark this step as Fail">❌ Fail</button>
                 </div>
             `;
             
@@ -537,6 +538,204 @@ class SidePanelTestingAssistant {
             this.updateStepsList();
             this.updateSessionInfo();
         }
+    }
+
+    async takeScreenshot() {
+        try {
+            // Check if we're in a Chrome extension environment
+            if (!chrome || !chrome.tabs || !chrome.runtime || !chrome.runtime.getManifest) {
+                this.showFallbackActions();
+                return;
+            }
+
+            const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+            if (tabs.length === 0) {
+                this.showNotification('No active tab found for screenshot', 'error');
+                return;
+            }
+            
+            const tab = tabs[0];
+            
+            // Send message to content script to prepare for screenshot
+            try {
+                await chrome.tabs.sendMessage(tab.id, { action: 'prepareScreenshot' });
+            } catch (error) {
+                // Content script might not be injected yet, try to inject it
+                try {
+                    await this.injectContentScript();
+                } catch (injectError) {
+                    console.log('Content script injection failed:', injectError);
+                }
+            }
+            
+            // Capture screenshot
+            const dataUrl = await chrome.tabs.captureVisibleTab(null, { format: 'png' });
+            
+            const screenshot = {
+                id: Date.now(),
+                timestamp: new Date(),
+                dataUrl: dataUrl,
+                url: tab.url,
+                title: tab.title
+            };
+
+            this.screenshots.push(screenshot);
+            
+            this.updateSessionInfo();
+            this.saveData();
+            
+            // Show success feedback
+            this.showNotification('Screenshot captured successfully!', 'success');
+            
+        } catch (error) {
+            console.error('Screenshot error:', error);
+            
+            // Show fallback actions instead of just error message
+            this.showFallbackActions();
+        }
+    }
+
+    async takeScreenshotForStep(stepIndex) {
+        try {
+            // Check if we're in a Chrome extension environment
+            if (!chrome || !chrome.tabs || !chrome.runtime || !chrome.runtime.getManifest) {
+                this.showFallbackActions();
+                return;
+            }
+
+            const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+            if (tabs.length === 0) {
+                this.showNotification('No active tab found for screenshot', 'error');
+                return;
+            }
+            
+            const tab = tabs[0];
+            
+            // Send message to content script to prepare for screenshot
+            try {
+                await chrome.tabs.sendMessage(tab.id, { action: 'prepareScreenshot' });
+            } catch (error) {
+                // Content script might not be injected yet, try to inject it
+                try {
+                    await this.injectContentScript();
+                } catch (injectError) {
+                    console.log('Content script injection failed:', injectError);
+                }
+            }
+            
+            // Capture screenshot
+            const dataUrl = await chrome.tabs.captureVisibleTab(null, { format: 'png' });
+            
+            const screenshot = {
+                id: Date.now(),
+                timestamp: new Date(),
+                dataUrl: dataUrl,
+                url: tab.url,
+                title: tab.title
+            };
+
+            this.screenshots.push(screenshot);
+            
+            // Associate screenshot with the specific step
+            if (stepIndex >= 0 && stepIndex < this.testSteps.length) {
+                const targetStep = this.testSteps[stepIndex];
+                if (!targetStep.screenshots) {
+                    targetStep.screenshots = [];
+                }
+                targetStep.screenshots.push(screenshot);
+                
+                this.updateStepsList(); // Update steps list to show associated screenshots
+                this.showNotification(`Screenshot associated with Step ${stepIndex + 1}!`, 'success');
+            }
+            
+            this.updateSessionInfo();
+            this.saveData();
+            
+        } catch (error) {
+            console.error('Screenshot error:', error);
+            this.showFallbackActions();
+        }
+    }
+
+    showFallbackActions() {
+        const actionButtons = document.getElementById('actionButtons');
+        const fallbackActions = document.getElementById('fallbackActions');
+        
+        if (actionButtons && fallbackActions) {
+            actionButtons.style.display = 'none';
+            fallbackActions.style.display = 'block';
+        }
+    }
+
+    async openMainExtension() {
+        try {
+            // Try to open the main extension popup
+            if (chrome && chrome.action && chrome.action.openPopup) {
+                await chrome.action.openPopup();
+            } else {
+                // Fallback: show instructions
+                this.showNotification('Please click the extension icon in Chrome toolbar to access screenshot functionality.', 'info');
+            }
+        } catch (error) {
+            // Fallback: show instructions
+            this.showNotification('Please click the extension icon in Chrome toolbar to access screenshot functionality.', 'info');
+        }
+    }
+
+    async checkDownloadStatus() {
+        try {
+            const result = await chrome.storage.local.get(['hasDownloadedCurrentSession', 'lastDownloadTime']);
+            return {
+                hasDownloaded: result.hasDownloadedCurrentSession || false,
+                lastDownloadTime: result.lastDownloadTime || null
+            };
+        } catch (error) {
+            console.error('Error checking download status:', error);
+            return { hasDownloaded: false, lastDownloadTime: null };
+        }
+    }
+
+    clearSteps() {
+        if (this.testSteps.length === 0 && this.screenshots.length === 0) {
+            this.showNotification('No data to clear', 'info');
+            return;
+        }
+
+        this.showClearStepsConfirmDialog();
+    }
+
+    async showClearStepsConfirmDialog() {
+        const downloadStatus = await this.checkDownloadStatus();
+        
+        let message = 'Are you sure you want to clear all test steps and screenshots? This action cannot be undone.';
+        let extraWarning = '';
+        
+        if (!downloadStatus.hasDownloaded && (this.testSteps.length > 0 || this.screenshots.length > 0)) {
+            extraWarning = '\n\n⚠️ WARNING: You haven\'t downloaded a report yet. Consider exporting your data first!';
+        } else if (downloadStatus.hasDownloaded && downloadStatus.lastDownloadTime) {
+            const downloadDate = new Date(downloadStatus.lastDownloadTime);
+            extraWarning = `\n\n✅ Last download: ${downloadDate.toLocaleString()}`;
+        }
+
+        const fullMessage = message + extraWarning;
+        
+        if (confirm(fullMessage)) {
+            this.performClearSteps();
+        }
+    }
+
+    performClearSteps() {
+        this.testSteps = [];
+        this.screenshots = [];
+        
+        // Reset download tracking for new session
+        chrome.storage.local.set({ hasDownloadedCurrentSession: false });
+        
+        this.updateStepsList();
+        this.updateSessionInfo();
+        this.saveData();
+        
+        this.showNotification('All steps and screenshots cleared', 'success');
     }
 }
 
