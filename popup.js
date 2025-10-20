@@ -1105,6 +1105,35 @@ class TestingAssistant {
         }, 15000); // 15 seconds
     }
 
+    normalizeTimestamp(timestamp) {
+        // Convert various timestamp formats to a proper Date object
+        if (!timestamp) return new Date();
+        
+        if (timestamp instanceof Date) {
+            return timestamp;
+        } else if (typeof timestamp === 'string') {
+            return new Date(timestamp);
+        } else if (typeof timestamp === 'number') {
+            return new Date(timestamp > 1000000000000 ? timestamp : timestamp * 1000);
+        } else if (typeof timestamp === 'object' && timestamp !== null) {
+            if (timestamp.getTime && typeof timestamp.getTime === 'function') {
+                return new Date(timestamp.getTime());
+            } else if (timestamp.$date) {
+                return new Date(timestamp.$date);
+            } else if (timestamp._seconds || timestamp.seconds) {
+                const seconds = timestamp._seconds || timestamp.seconds;
+                const nanoseconds = timestamp._nanoseconds || timestamp.nanoseconds || 0;
+                return new Date(seconds * 1000 + nanoseconds / 1000000);
+            } else {
+                // Try to extract a valid date from the object
+                return new Date(timestamp.toString());
+            }
+        }
+        
+        // Fallback to current date if we can't parse it
+        return new Date();
+    }
+
     formatTimestamp(timestamp) {
         try {
             let date;
@@ -1123,6 +1152,23 @@ class TestingAssistant {
             } else if (typeof timestamp === 'number') {
                 // Handle Unix timestamps (both seconds and milliseconds)
                 date = new Date(timestamp > 1000000000000 ? timestamp : timestamp * 1000);
+            } else if (typeof timestamp === 'object' && timestamp !== null) {
+                // Handle objects that might be serialized Date objects
+                if (timestamp.getTime && typeof timestamp.getTime === 'function') {
+                    // It's a Date-like object
+                    date = new Date(timestamp.getTime());
+                } else if (timestamp.$date) {
+                    // MongoDB-style date object
+                    date = new Date(timestamp.$date);
+                } else if (timestamp._seconds || timestamp.seconds) {
+                    // Firestore-style timestamp
+                    const seconds = timestamp._seconds || timestamp.seconds;
+                    const nanoseconds = timestamp._nanoseconds || timestamp.nanoseconds || 0;
+                    date = new Date(seconds * 1000 + nanoseconds / 1000000);
+                } else {
+                    // Try to convert the object to a string and then to a date
+                    date = new Date(timestamp.toString());
+                }
             } else {
                 // Fallback: try to convert whatever we got
                 date = new Date(timestamp);
@@ -1200,20 +1246,16 @@ class TestingAssistant {
                 this.testSteps = data.testSteps || [];
                 this.screenshots = data.screenshots || [];
                 
-                // Convert timestamp strings back to Date objects after loading from storage
+                // Convert timestamps back to Date objects after loading from storage
                 this.testSteps.forEach(step => {
-                    if (step.timestamp && typeof step.timestamp === 'string') {
-                        step.timestamp = new Date(step.timestamp);
-                    }
-                    if (step.markedTimestamp && typeof step.markedTimestamp === 'string') {
-                        step.markedTimestamp = new Date(step.markedTimestamp);
+                    step.timestamp = this.normalizeTimestamp(step.timestamp);
+                    if (step.markedTimestamp) {
+                        step.markedTimestamp = this.normalizeTimestamp(step.markedTimestamp);
                     }
                 });
                 
                 this.screenshots.forEach(screenshot => {
-                    if (screenshot.timestamp && typeof screenshot.timestamp === 'string') {
-                        screenshot.timestamp = new Date(screenshot.timestamp);
-                    }
+                    screenshot.timestamp = this.normalizeTimestamp(screenshot.timestamp);
                 });
                 
                 // Restore UI state
