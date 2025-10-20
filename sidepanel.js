@@ -421,12 +421,29 @@ class SidePanelTestingAssistant {
     }
 
     saveData() {
+        // Properly serialize Date objects to prevent empty object corruption
+        const serializedTestSteps = this.testSteps.map(step => ({
+            ...step,
+            timestamp: step.timestamp instanceof Date ? step.timestamp.toISOString() : step.timestamp,
+            markedTimestamp: step.markedTimestamp instanceof Date ? step.markedTimestamp.toISOString() : step.markedTimestamp
+        }));
+        
+        const serializedScreenshots = this.screenshots.map(screenshot => ({
+            ...screenshot,
+            timestamp: screenshot.timestamp instanceof Date ? screenshot.timestamp.toISOString() : screenshot.timestamp
+        }));
+        
         const data = {
             currentSession: this.currentSession,
-            testSteps: this.testSteps,
-            screenshots: this.screenshots,
+            testSteps: serializedTestSteps,
+            screenshots: serializedScreenshots,
             // Script data now stored within testSteps with fromScript flag
         };
+        
+        console.log('[DEBUG] Saving data with serialized timestamps:', data.testSteps.map(s => ({ 
+            markedTimestamp: s.markedTimestamp, 
+            type: typeof s.markedTimestamp 
+        })));
         
         chrome.storage.local.set({ testingAssistantData: data });
     }
