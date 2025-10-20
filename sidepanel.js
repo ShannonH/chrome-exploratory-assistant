@@ -120,6 +120,9 @@ class SidePanelTestingAssistant {
         document.getElementById('saveStep').addEventListener('click', () => this.saveStep());
         document.getElementById('cancelStep').addEventListener('click', () => this.hideStepInput());
 
+        // Toggle completed steps
+        document.getElementById('toggleCompletedSteps').addEventListener('click', () => this.toggleCompletedSteps());
+
         // Add event delegation for step action buttons
         document.getElementById('stepsList').addEventListener('click', (e) => {
             if (e.target.classList.contains('btn-pass') || e.target.closest('.btn-pass')) {
@@ -173,33 +176,36 @@ class SidePanelTestingAssistant {
         document.getElementById('stepCount').textContent = this.testSteps.length;
         document.getElementById('screenshotCount').textContent = this.screenshots.length;
         
-        // Calculate session time based on actual step activity
-        if (this.currentSession && this.currentSession.startTime && this.currentSession.endTime) {
-            const elapsed = new Date(this.currentSession.endTime).getTime() - new Date(this.currentSession.startTime).getTime();
-            const hours = Math.floor(elapsed / 3600000);
-            const minutes = Math.floor((elapsed % 3600000) / 60000);
-            const seconds = Math.floor((elapsed % 60000) / 1000);
-
-            document.getElementById('sessionTime').textContent = 
-                `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        // Calculate session time based on marked step timestamps only
+        if (this.testSteps.length > 0) {
+            // Find all marked timestamps (when steps were marked as pass/fail)
+            const markedTimes = this.testSteps
+                .filter(step => step.markedTimestamp)
+                .map(step => new Date(step.markedTimestamp))
+                .filter(date => !isNaN(date));
+            
+            if (markedTimes.length > 0) {
+                const startTime = new Date(Math.min(...markedTimes));
+                const endTime = new Date(Math.max(...markedTimes));
+                
+                const elapsed = endTime - startTime;
+                const hours = Math.floor(elapsed / 3600000);
+                const minutes = Math.floor((elapsed % 3600000) / 60000);
+                const seconds = Math.floor((elapsed % 60000) / 1000);
+                
+                document.getElementById('sessionTime').textContent = 
+                    `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            } else {
+                document.getElementById('sessionTime').textContent = '00:00:00';
+            }
         } else {
             document.getElementById('sessionTime').textContent = '00:00:00';
         }
     }
 
     updateStatus(text, type = 'ready') {
-        const statusText = document.getElementById('statusText');
-        const statusDot = document.querySelector('.status-dot');
-        
-        statusText.textContent = text;
-        
-        // Update status dot color
-        statusDot.style.background = {
-            'ready': '#10b981',
-            'warning': '#f59e0b',
-            'success': '#10b981',
-            'error': '#ef4444'
-        }[type] || '#10b981';
+        // Status indicator removed from UI - this function is now a no-op
+        // but kept for backward compatibility with existing code
     }
 
     showStepInput() {
@@ -262,13 +268,10 @@ class SidePanelTestingAssistant {
         if (index >= 0 && index < this.testSteps.length) {
             const currentStatus = this.testSteps[index].status;
             this.testSteps[index].status = status;
-            this.testSteps[index].timestamp = new Date(); // Update timestamp on each action
-            
-            // Initialize session automatically if needed
-            this.initializeSession();
-            
-            // Update session timing based on step activity
-            this.autoUpdateSessionTiming();
+            // Only update the timestamp when the step gets marked as pass or fail (not pending/in-progress)
+            if (currentStatus !== status && (status === 'pass' || status === 'fail')) {
+                this.testSteps[index].markedTimestamp = new Date();
+            }
             
             this.updateStepsList();
             this.updateSessionInfo();
@@ -306,7 +309,7 @@ class SidePanelTestingAssistant {
                     <span class="step-status ${step.status}">${step.status}</span>
                 </div>
                 <div class="step-description">${step.description}</div>
-                <div class="step-timestamp">${this.formatTimestamp(step.timestamp)}</div>
+                ${step.markedTimestamp ? `<div class="step-timestamp">${this.formatTimestamp(step.markedTimestamp)}</div>` : ''}
                 <div class="step-actions">
                     <button class="btn btn-mini btn-pass" data-step-index="${index}" title="Mark this step as Pass">✅ Pass</button>
                     <button class="btn btn-mini btn-fail" data-step-index="${index}" title="Mark this step as Fail">❌ Fail</button>
@@ -339,12 +342,58 @@ class SidePanelTestingAssistant {
     
     // Script and export functionality is handled in the main extension popup
 
+    toggleCompletedSteps() {
+        const stepsList = document.getElementById('stepsList');
+        const button = document.getElementById('toggleCompletedSteps');
+        
+        if (stepsList.classList.contains('hide-completed')) {
+            stepsList.classList.remove('hide-completed');
+            button.innerHTML = '<span class="btn-icon">👁️</span> Hide Completed';
+        } else {
+            stepsList.classList.add('hide-completed');
+            button.innerHTML = '<span class="btn-icon">👁️‍🗨️</span> Show Completed';
+        }
+    }
+
+    normalizeTimestamp(timestamp) {
+        // Convert various timestamp formats to a proper Date object
+        // Return null if no valid timestamp exists (don't create fallback dates)
+        if (!timestamp) return null;
+        
+        if (timestamp instanceof Date) {
+            return timestamp;
+        } else if (typeof timestamp === 'string') {
+            const date = new Date(timestamp);
+            return isNaN(date.getTime()) ? null : date;
+        } else if (typeof timestamp === 'number') {
+            return new Date(timestamp > 1000000000000 ? timestamp : timestamp * 1000);
+        } else if (typeof timestamp === 'object' && timestamp !== null) {
+            if (timestamp.getTime && typeof timestamp.getTime === 'function') {
+                return new Date(timestamp.getTime());
+            } else if (timestamp.$date) {
+                return new Date(timestamp.$date);
+            } else if (timestamp._seconds || timestamp.seconds) {
+                const seconds = timestamp._seconds || timestamp.seconds;
+                const nanoseconds = timestamp._nanoseconds || timestamp.nanoseconds || 0;
+                return new Date(seconds * 1000 + nanoseconds / 1000000);
+            } else {
+                // Try to extract a valid date from the object
+                const date = new Date(timestamp.toString());
+                return isNaN(date.getTime()) ? null : date;
+            }
+        }
+        
+        // Return null if we can't parse it (no fallback date)
+        return null;
+    }
+
     formatTimestamp(timestamp) {
         try {
             let date;
             
+            // If no timestamp is provided, return a placeholder instead of current time
             if (!timestamp) {
-                return new Date().toLocaleString();
+                return 'No timestamp';
             }
             
             // Handle multiple timestamp formats
@@ -356,6 +405,23 @@ class SidePanelTestingAssistant {
             } else if (typeof timestamp === 'number') {
                 // Handle Unix timestamps (both seconds and milliseconds)
                 date = new Date(timestamp > 1000000000000 ? timestamp : timestamp * 1000);
+            } else if (typeof timestamp === 'object' && timestamp !== null) {
+                // Handle objects that might be serialized Date objects
+                if (timestamp.getTime && typeof timestamp.getTime === 'function') {
+                    // It's a Date-like object
+                    date = new Date(timestamp.getTime());
+                } else if (timestamp.$date) {
+                    // MongoDB-style date object
+                    date = new Date(timestamp.$date);
+                } else if (timestamp._seconds || timestamp.seconds) {
+                    // Firestore-style timestamp
+                    const seconds = timestamp._seconds || timestamp.seconds;
+                    const nanoseconds = timestamp._nanoseconds || timestamp.nanoseconds || 0;
+                    date = new Date(seconds * 1000 + nanoseconds / 1000000);
+                } else {
+                    // Try to convert the object to a string and then to a date
+                    date = new Date(timestamp.toString());
+                }
             } else {
                 // Fallback: try to convert whatever we got
                 date = new Date(timestamp);
@@ -363,14 +429,15 @@ class SidePanelTestingAssistant {
             
             // Verify the date is valid
             if (isNaN(date.getTime())) {
-                console.warn('Invalid timestamp:', timestamp);
-                return new Date().toLocaleString() + ' (now)';
+                console.warn('Invalid timestamp detected:', timestamp, 'Type:', typeof timestamp);
+                // Return a more helpful error message showing what we tried to parse
+                return `Invalid timestamp (${typeof timestamp}: ${String(timestamp).substring(0, 50)})`;
             }
             
             return date.toLocaleString();
         } catch (error) {
             console.error('Error formatting timestamp:', error, timestamp);
-            return new Date().toLocaleString() + ' (fallback)';
+            return `Error formatting timestamp (${typeof timestamp}: ${String(timestamp).substring(0, 50)})`;
         }
     }
 
@@ -395,6 +462,23 @@ class SidePanelTestingAssistant {
                 this.testSteps = data.testSteps || [];
                 this.screenshots = data.screenshots || [];
                 
+                // Convert timestamps back to Date objects after loading from storage
+                this.testSteps.forEach(step => {
+                    // Only normalize timestamps if they exist (don't create fallback dates)
+                    if (step.timestamp) {
+                        step.timestamp = this.normalizeTimestamp(step.timestamp);
+                    }
+                    if (step.markedTimestamp) {
+                        step.markedTimestamp = this.normalizeTimestamp(step.markedTimestamp);
+                    }
+                });
+                
+                this.screenshots.forEach(screenshot => {
+                    if (screenshot.timestamp) {
+                        screenshot.timestamp = this.normalizeTimestamp(screenshot.timestamp);
+                    }
+                });
+                
                 // Restore UI state
                 this.updateStepsList();
                 this.updateSessionInfo();
@@ -418,11 +502,27 @@ class SidePanelTestingAssistant {
             
             if (newData.testSteps) {
                 this.testSteps = newData.testSteps;
+                // Convert timestamps back to Date objects when syncing
+                this.testSteps.forEach(step => {
+                    // Only normalize timestamps if they exist (don't create fallback dates)
+                    if (step.timestamp) {
+                        step.timestamp = this.normalizeTimestamp(step.timestamp);
+                    }
+                    if (step.markedTimestamp) {
+                        step.markedTimestamp = this.normalizeTimestamp(step.markedTimestamp);
+                    }
+                });
                 shouldUpdate = true;
             }
             
             if (newData.screenshots) {
                 this.screenshots = newData.screenshots;
+                // Convert timestamps back to Date objects when syncing
+                this.screenshots.forEach(screenshot => {
+                    if (screenshot.timestamp) {
+                        screenshot.timestamp = this.normalizeTimestamp(screenshot.timestamp);
+                    }
+                });
                 shouldUpdate = true;
             }
             

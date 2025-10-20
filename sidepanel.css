@@ -308,6 +308,12 @@ body {
     gap: 8px;
 }
 
+/* Hide completed steps */
+.steps-list.hide-completed .step-item.pass,
+.steps-list.hide-completed .step-item.fail {
+    display: none;
+}
+
 .steps-list {
     flex: 1;
     overflow-y: auto;

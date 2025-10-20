@@ -32,12 +32,6 @@ class TestingAssistant {
             });
         });
 
-        // Session controls
-        document.getElementById('startSession').addEventListener('click', () => this.showSessionOptions());
-        document.getElementById('endSession').addEventListener('click', () => this.endSession());
-        document.getElementById('continueSession').addEventListener('click', () => this.startSession(false));
-        document.getElementById('newSession').addEventListener('click', () => this.startSession(true));
-
         // Action buttons
         document.getElementById('takeScreenshot').addEventListener('click', () => this.takeScreenshot());
         document.getElementById('addStep').addEventListener('click', () => this.showStepInput());
@@ -46,6 +40,10 @@ class TestingAssistant {
         // Step input
         document.getElementById('saveStep').addEventListener('click', () => this.saveStep());
         document.getElementById('cancelStep').addEventListener('click', () => this.hideStepInput());
+
+        // UI enhancements
+        document.getElementById('expandTextarea').addEventListener('click', () => this.toggleTextareaExpansion());
+        document.getElementById('toggleCompletedSteps').addEventListener('click', () => this.toggleCompletedSteps());
 
         // Script tab
         document.getElementById('uploadArea').addEventListener('click', () => {
@@ -100,129 +98,67 @@ class TestingAssistant {
         }
     }
 
-    showSessionOptions() {
-        // Check if there's existing data
-        if (this.testSteps.length > 0 || this.screenshots.length > 0) {
-            // Show options to continue or start new
-            document.getElementById('sessionOptions').style.display = 'block';
-            document.getElementById('startSession').style.display = 'none';
-        } else {
-            // No existing data, start new session directly
-            this.startSession(true);
-        }
-    }
-
-    hideSessionOptions() {
-        document.getElementById('sessionOptions').style.display = 'none';
-        document.getElementById('startSession').style.display = 'inline-flex';
-    }
-
-    getSessionStatusMessage(clearData, hasExistingData) {
-        if (clearData) {
-            return 'New testing session started';
-        } else if (hasExistingData) {
-            return 'Session resumed - retaining previous steps';
-        } else {
-            return 'Testing in progress';
-        }
-    }
-
-    async startSession(clearData = false) {
-        this.currentSession = {
-            id: Date.now(),
-            startTime: new Date(),
-            status: 'active'
-        };
-        this.sessionStartTime = Date.now();
-        
-        const hasExistingData = this.testSteps.length > 0 || this.screenshots.length > 0;
-        
-        // Clear data if explicitly requested
-        if (clearData) {
-            this.testSteps = [];
-            this.screenshots = [];
-        }
-
-        // Hide session options and update UI
-        this.hideSessionOptions();
-        document.getElementById('startSession').disabled = true;
-        document.getElementById('endSession').disabled = false;
-        document.getElementById('testInfo').style.display = 'block';
-        document.getElementById('actionButtons').style.display = 'block';
-        
-        // Update the steps list to reflect any data changes
-        this.updateStepsList();
-        
-        const statusMessage = this.getSessionStatusMessage(clearData, hasExistingData);
-        this.updateStatus(statusMessage, 'warning');
-        this.startSessionTimer();
-        this.updateSessionInfo();
-        
-        // Inject content script for screenshot capability
-        await this.injectContentScript();
-        
-        this.saveData();
-    }
-
-    endSession() {
-        if (this.currentSession) {
-            this.currentSession.endTime = new Date();
-            this.currentSession.status = 'completed';
-        }
-
-        clearInterval(this.sessionTimer);
-        
-        // Update UI - reset to initial state
-        this.hideSessionOptions();
-        document.getElementById('startSession').disabled = false;
-        document.getElementById('startSession').style.display = 'inline-flex';
-        document.getElementById('endSession').disabled = true;
-        document.getElementById('actionButtons').style.display = 'none';
-        document.getElementById('stepInput').style.display = 'none';
-        
-        this.updateStatus('Session completed', 'success');
-        this.saveData();
-    }
-
-    startSessionTimer() {
-        this.sessionTimer = setInterval(() => {
-            this.updateSessionInfo();
-        }, 1000);
-    }
-
     updateSessionInfo() {
-        // Always show current counts even when session isn't active
+        // Always show current counts
         document.getElementById('stepCount').textContent = this.testSteps.length;
         document.getElementById('screenshotCount').textContent = this.screenshots.length;
         
-        // Only update timer if there's an active session
-        if (!this.sessionStartTime || !this.currentSession || this.currentSession.status !== 'active') {
+        // Calculate session time based on marked step timestamps only
+        if (this.testSteps.length > 0) {
+            // Find all marked timestamps (when steps were marked as pass/fail)
+            const markedTimes = this.testSteps
+                .filter(step => step.markedTimestamp)
+                .map(step => new Date(step.markedTimestamp))
+                .filter(date => !isNaN(date));
+            
+            if (markedTimes.length > 0) {
+                const startTime = new Date(Math.min(...markedTimes));
+                const endTime = new Date(Math.max(...markedTimes));
+                
+                const elapsed = endTime - startTime;
+                const hours = Math.floor(elapsed / 3600000);
+                const minutes = Math.floor((elapsed % 3600000) / 60000);
+                const seconds = Math.floor((elapsed % 60000) / 1000);
+                
+                document.getElementById('sessionTime').textContent = 
+                    `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            } else {
+                document.getElementById('sessionTime').textContent = '00:00:00';
+            }
+        } else {
             document.getElementById('sessionTime').textContent = '00:00:00';
-            return;
         }
+    }
 
-        const elapsed = Date.now() - this.sessionStartTime;
-        const hours = Math.floor(elapsed / 3600000);
-        const minutes = Math.floor((elapsed % 3600000) / 60000);
-        const seconds = Math.floor((elapsed % 60000) / 1000);
+    toggleTextareaExpansion() {
+        const textarea = document.getElementById('scriptText');
+        const button = document.getElementById('expandTextarea');
+        
+        if (textarea.classList.contains('expanded')) {
+            textarea.classList.remove('expanded');
+            button.innerHTML = '<span class="btn-icon">🔍</span> Expand';
+        } else {
+            textarea.classList.add('expanded');
+            button.innerHTML = '<span class="btn-icon">🔼</span> Collapse';
+        }
+    }
 
-        document.getElementById('sessionTime').textContent = 
-            `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    toggleCompletedSteps() {
+        const stepsList = document.getElementById('stepsList');
+        const button = document.getElementById('toggleCompletedSteps');
+        
+        if (stepsList.classList.contains('hide-completed')) {
+            stepsList.classList.remove('hide-completed');
+            button.innerHTML = '<span class="btn-icon">👁️</span> Hide Completed';
+        } else {
+            stepsList.classList.add('hide-completed');
+            button.innerHTML = '<span class="btn-icon">👁️‍🗨️</span> Show Completed';
+        }
     }
 
     updateStatus(text, type = 'ready') {
-        const statusText = document.getElementById('statusText');
-        const statusDot = document.querySelector('.status-dot');
-        
-        statusText.textContent = text;
-        
-        // Update status dot color
-        statusDot.style.background = {
-            'ready': '#10b981',
-            'warning': '#f59e0b',
-            'success': '#10b981',
-            'error': '#ef4444'
-        }[type] || '#10b981';
+        // Status indicator removed from UI - this function is now a no-op
+        // but kept for backward compatibility with existing code
     }
 
     async takeScreenshot() {
@@ -385,7 +321,6 @@ class TestingAssistant {
         
         const step = {
             id: Date.now(),
-            timestamp: new Date(),
             description: description,
             status: 'in-progress',
             screenshots: [],
@@ -420,6 +355,10 @@ class TestingAssistant {
         if (index >= 0 && index < this.testSteps.length) {
             const currentStatus = this.testSteps[index].status;
             this.testSteps[index].status = status;
+            // Only update the timestamp when the step gets marked as pass or fail (not pending/in-progress)
+            if (currentStatus !== status && (status === 'pass' || status === 'fail')) {
+                this.testSteps[index].markedTimestamp = new Date();
+            }
             this.updateStepsList();
             this.saveData();
             
@@ -452,7 +391,7 @@ class TestingAssistant {
                     <span class="step-status ${step.status}">${step.status}</span>
                 </div>
                 <div class="step-description">${step.description}</div>
-                <div class="step-timestamp">${this.formatTimestamp(step.timestamp)}</div>
+                ${step.markedTimestamp ? `<div class="step-timestamp">${this.formatTimestamp(step.markedTimestamp)}</div>` : ''}
                 <div class="step-actions">
                     <button class="btn-mini btn-success step-pass-btn" data-index="${index}" title="Mark this step as Pass">✅ Pass</button>
                     <button class="btn-mini btn-danger step-fail-btn" data-index="${index}" title="Mark this step as Fail">❌ Fail</button>
@@ -515,11 +454,6 @@ class TestingAssistant {
             return;
         }
 
-        // Check if there's an active session, if not start one
-        if (!this.currentSession || this.currentSession.status !== 'active') {
-            await this.startSession();
-        }
-
         // Parse script into test steps and add them to the main test steps
         const scriptSteps = scriptText.split('\n')
             .map(line => line.trim())
@@ -530,7 +464,6 @@ class TestingAssistant {
         scriptSteps.forEach(stepText => {
             const step = {
                 id: Date.now() + Math.random(), // Ensure unique IDs
-                timestamp: new Date(),
                 description: stepText,
                 status: 'pending',
                 screenshots: [],
@@ -561,8 +494,30 @@ class TestingAssistant {
         const includeScreenshots = document.getElementById('includeScreenshots').checked;
         const includeTimestamps = document.getElementById('includeTimestamps').checked;
 
+        // Create session info based on marked step timestamps only
+        let sessionInfo = null;
+        if (this.testSteps.length > 0) {
+            // Find all marked timestamps (when steps were marked as pass/fail)
+            const markedTimes = this.testSteps
+                .filter(step => step.markedTimestamp)
+                .map(step => new Date(step.markedTimestamp))
+                .filter(date => !isNaN(date));
+            
+            if (markedTimes.length > 0) {
+                const startTime = new Date(Math.min(...markedTimes));
+                const endTime = new Date(Math.max(...markedTimes));
+                
+                sessionInfo = {
+                    id: `session-${this.testSteps[0]?.id || Date.now()}`,
+                    startTime: startTime,
+                    endTime: endTime,
+                    status: 'completed'
+                };
+            }
+        }
+
         const exportData = {
-            session: this.currentSession,
+            session: sessionInfo,
             steps: this.testSteps.map(step => ({
                 ...step,
                 timestamp: includeTimestamps ? step.timestamp : undefined
@@ -1145,12 +1100,45 @@ class TestingAssistant {
         }, 15000); // 15 seconds
     }
 
+    normalizeTimestamp(timestamp) {
+        // Convert various timestamp formats to a proper Date object
+        // Return null if no valid timestamp exists (don't create fallback dates)
+        if (!timestamp) return null;
+        
+        if (timestamp instanceof Date) {
+            return timestamp;
+        } else if (typeof timestamp === 'string') {
+            const date = new Date(timestamp);
+            return isNaN(date.getTime()) ? null : date;
+        } else if (typeof timestamp === 'number') {
+            return new Date(timestamp > 1000000000000 ? timestamp : timestamp * 1000);
+        } else if (typeof timestamp === 'object' && timestamp !== null) {
+            if (timestamp.getTime && typeof timestamp.getTime === 'function') {
+                return new Date(timestamp.getTime());
+            } else if (timestamp.$date) {
+                return new Date(timestamp.$date);
+            } else if (timestamp._seconds || timestamp.seconds) {
+                const seconds = timestamp._seconds || timestamp.seconds;
+                const nanoseconds = timestamp._nanoseconds || timestamp.nanoseconds || 0;
+                return new Date(seconds * 1000 + nanoseconds / 1000000);
+            } else {
+                // Try to extract a valid date from the object
+                const date = new Date(timestamp.toString());
+                return isNaN(date.getTime()) ? null : date;
+            }
+        }
+        
+        // Return null if we can't parse it (no fallback date)
+        return null;
+    }
+
     formatTimestamp(timestamp) {
         try {
             let date;
             
+            // If no timestamp is provided, return a placeholder instead of current time
             if (!timestamp) {
-                return new Date().toLocaleString();
+                return 'No timestamp';
             }
             
             // Handle multiple timestamp formats
@@ -1162,6 +1150,23 @@ class TestingAssistant {
             } else if (typeof timestamp === 'number') {
                 // Handle Unix timestamps (both seconds and milliseconds)
                 date = new Date(timestamp > 1000000000000 ? timestamp : timestamp * 1000);
+            } else if (typeof timestamp === 'object' && timestamp !== null) {
+                // Handle objects that might be serialized Date objects
+                if (timestamp.getTime && typeof timestamp.getTime === 'function') {
+                    // It's a Date-like object
+                    date = new Date(timestamp.getTime());
+                } else if (timestamp.$date) {
+                    // MongoDB-style date object
+                    date = new Date(timestamp.$date);
+                } else if (timestamp._seconds || timestamp.seconds) {
+                    // Firestore-style timestamp
+                    const seconds = timestamp._seconds || timestamp.seconds;
+                    const nanoseconds = timestamp._nanoseconds || timestamp.nanoseconds || 0;
+                    date = new Date(seconds * 1000 + nanoseconds / 1000000);
+                } else {
+                    // Try to convert the object to a string and then to a date
+                    date = new Date(timestamp.toString());
+                }
             } else {
                 // Fallback: try to convert whatever we got
                 date = new Date(timestamp);
@@ -1169,14 +1174,15 @@ class TestingAssistant {
             
             // Verify the date is valid
             if (isNaN(date.getTime())) {
-                console.warn('Invalid timestamp:', timestamp);
-                return new Date().toLocaleString() + ' (now)';
+                console.warn('Invalid timestamp detected:', timestamp, 'Type:', typeof timestamp);
+                // Return a more helpful error message showing what we tried to parse
+                return `Invalid timestamp (${typeof timestamp}: ${String(timestamp).substring(0, 50)})`;
             }
             
             return date.toLocaleString();
         } catch (error) {
             console.error('Error formatting timestamp:', error, timestamp);
-            return new Date().toLocaleString() + ' (fallback)';
+            return `Error formatting timestamp (${typeof timestamp}: ${String(timestamp).substring(0, 50)})`;
         }
     }
 
@@ -1237,6 +1243,23 @@ class TestingAssistant {
                 this.currentSession = data.currentSession || null;
                 this.testSteps = data.testSteps || [];
                 this.screenshots = data.screenshots || [];
+                
+                // Convert timestamps back to Date objects after loading from storage
+                this.testSteps.forEach(step => {
+                    // Only normalize timestamps if they exist (don't create fallback dates)
+                    if (step.timestamp) {
+                        step.timestamp = this.normalizeTimestamp(step.timestamp);
+                    }
+                    if (step.markedTimestamp) {
+                        step.markedTimestamp = this.normalizeTimestamp(step.markedTimestamp);
+                    }
+                });
+                
+                this.screenshots.forEach(screenshot => {
+                    if (screenshot.timestamp) {
+                        screenshot.timestamp = this.normalizeTimestamp(screenshot.timestamp);
+                    }
+                });
                 
                 // Restore UI state
                 this.updateStepsList();

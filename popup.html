@@ -23,10 +23,6 @@
                 <button id="helpToggle" class="btn btn-outline btn-small" title="Keyboard Shortcuts & Tips">
                     <span class="btn-icon">❓</span>
                 </button>
-                <div class="status-indicator" id="statusIndicator">
-                    <span class="status-dot"></span>
-                    <span id="statusText">Ready</span>
-                </div>
             </div>
         </header>
 
@@ -37,36 +33,8 @@
         </div>
 
         <div class="tab-content" id="testTab">
-            <div class="session-controls">
-                <button id="startSession" class="btn btn-primary">
-                    <span class="btn-icon">▶️</span>
-                    Start Session
-                </button>
-                <button id="endSession" class="btn btn-secondary" disabled>
-                    <span class="btn-icon">⏹️</span>
-                    End Session
-                </button>
-            </div>
 
-            <div class="session-options" id="sessionOptions" style="display: none;">
-                <div class="option-card">
-                    <p><strong>Previous test data found.</strong> Choose how to proceed:</p>
-                    <div class="session-choice">
-                        <button id="continueSession" class="btn btn-accent">
-                            <span class="btn-icon">▶️</span>
-                            Continue Session
-                            <small>Keep existing steps and screenshots</small>
-                        </button>
-                        <button id="newSession" class="btn btn-outline">
-                            <span class="btn-icon">🗑️</span>
-                            New Session
-                            <small>Clear all data and start fresh</small>
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <div class="test-info" id="testInfo" style="display: none;">
+            <div class="test-info" id="testInfo" style="display: block;">
                 <div class="info-card">
                     <div class="info-row">
                         <span class="label">Session Time:</span>
@@ -83,7 +51,7 @@
                 </div>
             </div>
 
-            <div class="action-buttons" id="actionButtons" style="display: none;">
+            <div class="action-buttons" id="actionButtons" style="display: block;">
                 <button id="takeScreenshot" class="btn btn-accent">
                     <span class="btn-icon">📸</span>
                     Screenshot
@@ -114,7 +82,13 @@
             </div>
 
             <div class="recent-steps" id="recentSteps">
-                <h3>Test Steps</h3>
+                <div class="steps-header">
+                    <h3>Test Steps</h3>
+                    <button id="toggleCompletedSteps" class="btn btn-small btn-outline" title="Hide/Show completed steps">
+                        <span class="btn-icon">👁️</span>
+                        Hide Completed
+                    </button>
+                </div>
                 <div class="steps-list" id="stepsList"></div>
             </div>
         </div>
@@ -131,6 +105,12 @@
                 </div>
 
                 <div class="script-textarea">
+                    <div class="textarea-header">
+                        <button id="expandTextarea" class="btn btn-small btn-outline" title="Expand text area for large scripts">
+                            <span class="btn-icon">🔍</span>
+                            Expand
+                        </button>
+                    </div>
                     <textarea id="scriptText" placeholder="Or paste your test script here...
 
 Example:

@@ -15,10 +15,6 @@
                 </div>
                 <h1>Testing Assistant</h1>
             </div>
-            <div class="status-indicator" id="statusIndicator">
-                <span class="status-dot"></span>
-                <span id="statusText">Ready</span>
-            </div>
         </header>
 
         <div class="test-info" id="testInfo" style="display: block;">
@@ -49,6 +45,10 @@
         <div class="test-steps-section">
             <div class="section-header">
                 <h3>Test Steps</h3>
+                <button id="toggleCompletedSteps" class="btn btn-small btn-outline" title="Hide/Show completed steps">
+                    <span class="btn-icon">👁️</span>
+                    Hide Completed
+                </button>
             </div>
             <div class="steps-list" id="stepsList"></div>
         </div>
