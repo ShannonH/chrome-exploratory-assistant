@@ -103,15 +103,22 @@ class TestingAssistant {
         document.getElementById('stepCount').textContent = this.testSteps.length;
         document.getElementById('screenshotCount').textContent = this.screenshots.length;
         
-        // Calculate session time based on step timestamps
+        // Calculate session time based on step timestamps - find earliest and latest
         if (this.testSteps.length > 0) {
-            const firstStep = this.testSteps[0];
-            const lastStep = this.testSteps[this.testSteps.length - 1];
-            const startTime = firstStep.timestamp;
-            const endTime = lastStep.markedTimestamp || lastStep.timestamp;
+            // Find the earliest timestamp (step creation time)
+            const startTimes = this.testSteps.map(step => new Date(step.timestamp)).filter(date => !isNaN(date));
+            const startTime = startTimes.length > 0 ? new Date(Math.min(...startTimes)) : null;
+            
+            // Find the latest timestamp (either marked time or creation time)
+            const endTimes = this.testSteps.map(step => {
+                const markedTime = step.markedTimestamp ? new Date(step.markedTimestamp) : null;
+                const createdTime = new Date(step.timestamp);
+                return markedTime && !isNaN(markedTime) ? markedTime : createdTime;
+            }).filter(date => !isNaN(date));
+            const endTime = endTimes.length > 0 ? new Date(Math.max(...endTimes)) : null;
             
             if (startTime && endTime) {
-                const elapsed = new Date(endTime) - new Date(startTime);
+                const elapsed = endTime - startTime;
                 const hours = Math.floor(elapsed / 3600000);
                 const minutes = Math.floor((elapsed % 3600000) / 60000);
                 const seconds = Math.floor((elapsed % 60000) / 1000);
@@ -362,8 +369,10 @@ class TestingAssistant {
         if (index >= 0 && index < this.testSteps.length) {
             const currentStatus = this.testSteps[index].status;
             this.testSteps[index].status = status;
-            // Update the timestamp when the step gets marked (not when it was added)
-            this.testSteps[index].markedTimestamp = new Date();
+            // Only update the timestamp when the step gets marked with a different status
+            if (currentStatus !== status) {
+                this.testSteps[index].markedTimestamp = new Date();
+            }
             this.updateStepsList();
             this.saveData();
             
