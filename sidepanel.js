@@ -136,7 +136,6 @@ class SidePanelTestingAssistant {
 
         // Action buttons
         document.getElementById('addStep').addEventListener('click', () => this.showStepInput());
-        document.getElementById('openMainExtension').addEventListener('click', () => this.openMainExtension());
 
         // Step input
         document.getElementById('saveStep').addEventListener('click', () => this.saveStep());
@@ -150,9 +149,6 @@ class SidePanelTestingAssistant {
             } else if (e.target.classList.contains('btn-fail') || e.target.closest('.btn-fail')) {
                 const stepIndex = parseInt(e.target.dataset.stepIndex || e.target.closest('.btn-fail').dataset.stepIndex);
                 this.markStep(stepIndex, 'fail');
-            } else if (e.target.classList.contains('btn-screenshot') || e.target.closest('.btn-screenshot')) {
-                const stepIndex = parseInt(e.target.dataset.stepIndex || e.target.closest('.btn-screenshot').dataset.stepIndex);
-                this.takeScreenshotForStep(stepIndex);
             }
         });
     }
@@ -240,21 +236,6 @@ class SidePanelTestingAssistant {
             'success': '#10b981',
             'error': '#ef4444'
         }[type] || '#10b981';
-    }
-
-    async openMainExtension() {
-        try {
-            // Try to open the main extension popup
-            if (chrome && chrome.action && chrome.action.openPopup) {
-                await chrome.action.openPopup();
-            } else {
-                // Fallback: show instructions
-                this.showNotification('Please click the extension icon in Chrome toolbar to access screenshot functionality.', 'info');
-            }
-        } catch (error) {
-            // Fallback: show instructions
-            this.showNotification('Please click the extension icon in Chrome toolbar to access screenshot functionality.', 'info');
-        }
     }
 
     showStepInput() {
@@ -349,7 +330,6 @@ class SidePanelTestingAssistant {
                 <div class="step-actions">
                     <button class="btn btn-mini btn-pass" data-step-index="${index}" title="Mark this step as Pass">✅ Pass</button>
                     <button class="btn btn-mini btn-fail" data-step-index="${index}" title="Mark this step as Fail">❌ Fail</button>
-                    <button class="btn btn-mini btn-screenshot" data-step-index="${index}" title="Take Screenshot for this step">📸 Screenshot</button>
                 </div>
             `;
             
@@ -366,68 +346,6 @@ class SidePanelTestingAssistant {
             });
         } catch (error) {
             console.error('Failed to inject content script:', error);
-        }
-    }
-
-    async takeScreenshotForStep(stepIndex) {
-        try {
-            // Check if we're in a Chrome extension environment
-            if (!chrome || !chrome.tabs || !chrome.runtime || !chrome.runtime.getManifest) {
-                this.showNotification('Screenshot functionality requires Chrome extension environment', 'error');
-                return;
-            }
-
-            const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-            if (tabs.length === 0) {
-                this.showNotification('No active tab found for screenshot', 'error');
-                return;
-            }
-            
-            const tab = tabs[0];
-            
-            // Send message to content script to prepare for screenshot
-            try {
-                await chrome.tabs.sendMessage(tab.id, { action: 'prepareScreenshot' });
-            } catch (error) {
-                // Content script might not be injected yet, try to inject it
-                try {
-                    await this.injectContentScript();
-                } catch (injectError) {
-                    console.log('Content script injection failed:', injectError);
-                }
-            }
-            
-            // Capture screenshot
-            const dataUrl = await chrome.tabs.captureVisibleTab(null, { format: 'png' });
-            
-            const screenshot = {
-                id: Date.now(),
-                timestamp: new Date(),
-                dataUrl: dataUrl,
-                url: tab.url,
-                title: tab.title
-            };
-
-            this.screenshots.push(screenshot);
-            
-            // Associate screenshot with the specific step
-            if (stepIndex >= 0 && stepIndex < this.testSteps.length) {
-                const targetStep = this.testSteps[stepIndex];
-                if (!targetStep.screenshots) {
-                    targetStep.screenshots = [];
-                }
-                targetStep.screenshots.push(screenshot);
-                
-                this.updateStepsList(); // Update steps list to show associated screenshots
-                this.showNotification(`Screenshot associated with Step ${stepIndex + 1}!`, 'success');
-            }
-            
-            this.updateSessionInfo();
-            this.saveData();
-            
-        } catch (error) {
-            console.error('Screenshot error:', error);
-            this.showNotification('Screenshot failed', 'error');
         }
     }
 
