@@ -723,7 +723,7 @@ body {
 .upload-area {
     border: 2px dashed var(--border-color);
     border-radius: var(--border-radius);
-    padding: 30px;
+    padding: 12px;
     text-align: center;
     cursor: pointer;
     transition: var(--transition);
