@@ -8,7 +8,7 @@ class BackgroundService {
         // Extension installation/startup
         chrome.runtime.onInstalled.addListener((details) => {
             console.log('Exploratory Testing Assistant installed');
-            
+
             if (details.reason === 'install') {
                 this.showWelcomeNotification();
             }
@@ -146,12 +146,12 @@ class BackgroundService {
             const result = await chrome.storage.local.get('screenshots');
             const screenshots = result.screenshots || [];
             screenshots.push(screenshot);
-            
+
             // Keep only last 50 screenshots to manage storage
             if (screenshots.length > 50) {
                 screenshots.splice(0, screenshots.length - 50);
             }
-            
+
             await chrome.storage.local.set({ screenshots });
         } catch (error) {
             console.error('Screenshot storage error:', error);
@@ -163,22 +163,22 @@ class BackgroundService {
         try {
             const result = await chrome.storage.local.get('testSteps');
             const testSteps = result.testSteps || [];
-            
+
             const step = {
                 ...stepData,
                 id: Date.now(),
                 timestamp: new Date().toISOString()
             };
-            
+
             testSteps.push(step);
             await chrome.storage.local.set({ testSteps });
-            
+
             // Update badge with step count
             chrome.action.setBadgeText({
                 text: testSteps.length.toString()
             });
             chrome.action.setBadgeBackgroundColor({ color: '#6366f1' });
-            
+
         } catch (error) {
             console.error('Test step storage error:', error);
             throw error;
@@ -202,7 +202,7 @@ class BackgroundService {
     async exportTestData(exportOptions) {
         try {
             const sessionData = await this.getSessionData();
-            
+
             const exportData = {
                 ...sessionData,
                 exportedAt: new Date().toISOString(),
@@ -215,7 +215,7 @@ class BackgroundService {
             } else if (exportOptions.format === 'html') {
                 await this.downloadHTML(exportData, exportOptions.filename);
             }
-            
+
         } catch (error) {
             console.error('Export error:', error);
             throw error;
@@ -225,7 +225,7 @@ class BackgroundService {
     async downloadJSON(data, filename) {
         const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
-        
+
         await chrome.downloads.download({
             url: url,
             filename: filename || `test-session-${Date.now()}.json`,
@@ -237,7 +237,7 @@ class BackgroundService {
         const html = this.generateHTMLReport(data);
         const blob = new Blob([html], { type: 'text/html' });
         const url = URL.createObjectURL(blob);
-        
+
         await chrome.downloads.download({
             url: url,
             filename: filename || `test-report-${Date.now()}.html`,
@@ -249,7 +249,7 @@ class BackgroundService {
         const passedSteps = data.testSteps.filter(step => step.status === 'pass').length;
         const failedSteps = data.testSteps.filter(step => step.status === 'fail').length;
         const totalSteps = data.testSteps.length;
-        
+
         return `
 <!DOCTYPE html>
 <html lang="en">
@@ -454,7 +454,7 @@ class BackgroundService {
         try {
             const result = await chrome.storage.local.get('testSteps');
             const testSteps = result.testSteps || [];
-            
+
             if (testSteps.length > 0) {
                 testSteps[testSteps.length - 1].status = status;
                 await chrome.storage.local.set({ testSteps });
@@ -484,9 +484,9 @@ class BackgroundService {
             if (chrome.sidePanel) {
                 if (chrome.sidePanel.open) {
                     // Method 1: Modern API (Chrome 114+)
-                    await chrome.sidePanel.open({ 
+                    await chrome.sidePanel.open({
                         tabId: tab ? tab.id : undefined,
-                        windowId: tab ? tab.windowId : chrome.windows.WINDOW_ID_CURRENT 
+                        windowId: tab ? tab.windowId : chrome.windows.WINDOW_ID_CURRENT
                     });
                 } else if (chrome.sidePanel.setOptions) {
                     // Method 2: Set options and let user open manually
@@ -510,7 +510,7 @@ class BackgroundService {
     async handleCommand(command) {
         try {
             const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-            
+
             switch (command) {
                 case 'open-testing-assistant':
                     // Try to open side panel, fallback to detached window
@@ -533,18 +533,18 @@ class BackgroundService {
                         console.error('Failed to open testing assistant:', error);
                     }
                     break;
-                    
+
                 case 'take-screenshot':
                     await this.captureScreenshot(tab);
                     break;
-                    
+
                 case 'mark-pass':
                 case 'mark-fail':
                     // Send message to content script or popup
                     const status = command === 'mark-pass' ? 'pass' : 'fail';
-                    chrome.runtime.sendMessage({ 
-                        action: 'markStep', 
-                        status: status 
+                    chrome.runtime.sendMessage({
+                        action: 'markStep',
+                        status: status
                     });
                     break;
             }
