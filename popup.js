@@ -357,10 +357,7 @@ class TestingAssistant {
             this.testSteps[index].status = status;
             // Only update the timestamp when the step gets marked as pass or fail (not pending/in-progress)
             if (currentStatus !== status && (status === 'pass' || status === 'fail')) {
-                console.log('[DEBUG] Setting markedTimestamp for step', index, 'from', currentStatus, 'to', status);
-                const newTimestamp = new Date();
-                this.testSteps[index].markedTimestamp = newTimestamp;
-                console.log('[DEBUG] markedTimestamp set to:', newTimestamp, 'type:', typeof newTimestamp, 'instanceof Date:', newTimestamp instanceof Date);
+                this.testSteps[index].markedTimestamp = new Date();
             }
             this.updateStepsList();
             this.saveData();
@@ -674,7 +671,8 @@ class TestingAssistant {
             <div class="step ${step.status}">
                 <h4>Step ${index + 1}: ${step.status.toUpperCase()}</h4>
                 <p>${step.description}</p>
-                ${step.timestamp ? `<div class="timestamp">${this.formatTimestamp(step.timestamp)}</div>` : ''}
+                ${step.markedTimestamp ? `<div class="timestamp">Marked: ${this.formatTimestamp(step.markedTimestamp)}</div>` : ''}
+                ${step.timestamp ? `<div class="timestamp">Created: ${this.formatTimestamp(step.timestamp)}</div>` : ''}
                 ${step.screenshots && step.screenshots.length > 0 ? `
                     <div class="step-screenshots">
                         <h5>Screenshots (${step.screenshots.length}):</h5>
@@ -691,6 +689,7 @@ class TestingAssistant {
                             data-step-index="${index}" 
                             data-step-description="${step.description.replace(/"/g, '&quot;').replace(/'/g, '&#39;')}" 
                             data-step-timestamp="${step.timestamp ? this.formatTimestamp(step.timestamp).replace(/"/g, '&quot;') : ''}" 
+                            data-marked-timestamp="${step.markedTimestamp ? this.formatTimestamp(step.markedTimestamp).replace(/"/g, '&quot;') : ''}"
                             data-screenshot-count="${step.screenshots ? step.screenshots.length : 0}"
                             onclick="openBugTemplateFromButton(this)">
                         🐛 Create Bug Template
@@ -736,12 +735,13 @@ class TestingAssistant {
             const stepIndex = parseInt(button.dataset.stepIndex);
             const stepDescription = button.dataset.stepDescription;
             const timestamp = button.dataset.stepTimestamp;
+            const markedTimestamp = button.dataset.markedTimestamp;
             const screenshotCount = parseInt(button.dataset.screenshotCount) || 0;
             
-            openBugTemplate(stepIndex, stepDescription, timestamp, screenshotCount);
+            openBugTemplate(stepIndex, stepDescription, timestamp, markedTimestamp, screenshotCount);
         }
         
-        function openBugTemplate(stepIndex, stepDescription, timestamp, screenshotCount = 0) {
+        function openBugTemplate(stepIndex, stepDescription, timestamp, markedTimestamp, screenshotCount = 0) {
             const modal = document.getElementById('bugTemplateModal');
             const textarea = document.getElementById('bugTemplateText');
             
@@ -787,7 +787,8 @@ class TestingAssistant {
 
 **Test Step:** Step \${stepIndex + 1}
 **Description:** \${stepDescription}
-**Timestamp:** \${timestamp}
+**Step Created:** \${timestamp || 'N/A'}
+**Failed At:** \${markedTimestamp || 'N/A'}
 **Status:** FAILED
 
 **Summary:** 
@@ -806,7 +807,7 @@ class TestingAssistant {
 **Environment:**
 - Browser: \${getBrowserName()}
 - URL: \${window.location.origin}
-- Test Date: \${new Date().toLocaleDateString()}
+- Test Date/Time: \${new Date().toLocaleString()}
 
 **Screenshots:**
 \${screenshotCount > 0 ? \`\${screenshotCount} screenshot(s) associated with this step\` : 'No screenshots associated with this step'}
@@ -1118,7 +1119,6 @@ class TestingAssistant {
         } else if (typeof timestamp === 'object' && timestamp !== null) {
             // Check for empty objects first - CRITICAL FIX
             if (Object.keys(timestamp).length === 0) {
-                console.warn('[DEBUG] Empty object detected in normalizeTimestamp:', timestamp);
                 return null;
             }
             
@@ -1131,8 +1131,7 @@ class TestingAssistant {
                 const nanoseconds = timestamp._nanoseconds || timestamp.nanoseconds || 0;
                 return new Date(seconds * 1000 + nanoseconds / 1000000);
             } else {
-                // Log what kind of object we're trying to parse
-                console.warn('[DEBUG] Unknown object type in normalizeTimestamp:', timestamp, 'keys:', Object.keys(timestamp));
+
                 // Try to extract a valid date from the object
                 const date = new Date(timestamp.toString());
                 return isNaN(date.getTime()) ? null : date;
@@ -1204,10 +1203,7 @@ class TestingAssistant {
             // Script data now stored within testSteps with fromScript flag
         };
         
-        console.log('[DEBUG] Saving data with serialized timestamps:', data.testSteps.map(s => ({ 
-            markedTimestamp: s.markedTimestamp, 
-            type: typeof s.markedTimestamp 
-        })));
+
         
         // Mock Chrome storage for testing environment
         if (!chrome || !chrome.storage) {
@@ -1247,9 +1243,7 @@ class TestingAssistant {
                         step.timestamp = this.normalizeTimestamp(step.timestamp);
                     }
                     if (step.markedTimestamp) {
-                        console.log('[DEBUG] Normalizing markedTimestamp:', step.markedTimestamp, 'type:', typeof step.markedTimestamp);
                         const normalized = this.normalizeTimestamp(step.markedTimestamp);
-                        console.log('[DEBUG] Normalized result:', normalized, 'type:', typeof normalized);
                         step.markedTimestamp = normalized; // Could be null for invalid timestamps
                     }
                 });

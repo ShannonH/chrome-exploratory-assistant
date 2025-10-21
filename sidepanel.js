@@ -270,10 +270,7 @@ class SidePanelTestingAssistant {
             this.testSteps[index].status = status;
             // Only update the timestamp when the step gets marked as pass or fail (not pending/in-progress)
             if (currentStatus !== status && (status === 'pass' || status === 'fail')) {
-                console.log('[DEBUG] Setting markedTimestamp for step', index, 'from', currentStatus, 'to', status);
-                const newTimestamp = new Date();
-                this.testSteps[index].markedTimestamp = newTimestamp;
-                console.log('[DEBUG] markedTimestamp set to:', newTimestamp, 'type:', typeof newTimestamp, 'instanceof Date:', newTimestamp instanceof Date);
+                this.testSteps[index].markedTimestamp = new Date();
             }
             
             this.updateStepsList();
@@ -373,7 +370,6 @@ class SidePanelTestingAssistant {
         } else if (typeof timestamp === 'object' && timestamp !== null) {
             // Check for empty objects first - CRITICAL FIX
             if (Object.keys(timestamp).length === 0) {
-                console.warn('[DEBUG] Empty object detected in normalizeTimestamp:', timestamp);
                 return null;
             }
             
@@ -386,8 +382,7 @@ class SidePanelTestingAssistant {
                 const nanoseconds = timestamp._nanoseconds || timestamp.nanoseconds || 0;
                 return new Date(seconds * 1000 + nanoseconds / 1000000);
             } else {
-                // Log what kind of object we're trying to parse
-                console.warn('[DEBUG] Unknown object type in normalizeTimestamp:', timestamp, 'keys:', Object.keys(timestamp));
+
                 // Try to extract a valid date from the object
                 const date = new Date(timestamp.toString());
                 return isNaN(date.getTime()) ? null : date;
@@ -440,10 +435,7 @@ class SidePanelTestingAssistant {
             // Script data now stored within testSteps with fromScript flag
         };
         
-        console.log('[DEBUG] Saving data with serialized timestamps:', data.testSteps.map(s => ({ 
-            markedTimestamp: s.markedTimestamp, 
-            type: typeof s.markedTimestamp 
-        })));
+
         
         chrome.storage.local.set({ testingAssistantData: data });
     }
@@ -465,9 +457,7 @@ class SidePanelTestingAssistant {
                         step.timestamp = this.normalizeTimestamp(step.timestamp);
                     }
                     if (step.markedTimestamp) {
-                        console.log('[DEBUG] Normalizing markedTimestamp (loadSavedData):', step.markedTimestamp, 'type:', typeof step.markedTimestamp);
                         const normalized = this.normalizeTimestamp(step.markedTimestamp);
-                        console.log('[DEBUG] Normalized result (loadSavedData):', normalized, 'type:', typeof normalized);
                         step.markedTimestamp = normalized; // Could be null for invalid timestamps
                     }
                 });
@@ -508,9 +498,7 @@ class SidePanelTestingAssistant {
                         step.timestamp = this.normalizeTimestamp(step.timestamp);
                     }
                     if (step.markedTimestamp) {
-                        console.log('[DEBUG] Normalizing markedTimestamp (handleStorageChange):', step.markedTimestamp, 'type:', typeof step.markedTimestamp);
                         const normalized = this.normalizeTimestamp(step.markedTimestamp);
-                        console.log('[DEBUG] Normalized result (handleStorageChange):', normalized, 'type:', typeof normalized);
                         step.markedTimestamp = normalized; // Could be null for invalid timestamps
                     }
                 });
