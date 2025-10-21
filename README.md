@@ -8,8 +8,7 @@ A Chrome extension for QA engineers and testers to document exploratory test ses
 - 📸 **Screenshot Tracking**: Capture screenshots (via popup or context menu) and track their count. Screenshots are linked to steps and stored in extension storage (last 50 kept).
 - 📋 **Script-Guided Testing**: Upload or paste a test script to guide your session. Steps from the script are shown as a checklist.
 - 📤 **Export Results**: Export your session data and steps in JSON or HTML format. Optionally include screenshots.
-- 🧩 **Multiple UIs**: Use the popup, sidepanel, or overlay for flexible access to the assistant during testing.
-- ⏹️ **No session timer or status indicator**: The extension does not track elapsed time or provide session status indicators.
+- 🧩 **Multiple UIs**: Use the popup or sidepanel for flexible access to the assistant during testing.
 
 ## 🛠️ Installation
 
@@ -46,9 +45,8 @@ A Chrome extension for QA engineers and testers to document exploratory test ses
 - ⚙️ Choose format (JSON/HTML), and whether to include screenshots.
 - ⬇️ Click "Export Data" to download your report.
 
-### 🧩 Using the Sidepanel and Overlay
+### 🧩 Using the Sidepanel
 - 📌 Pin the assistant for persistent access via the sidepanel.
-- 🪟 Use the overlay for in-page interaction (content and actions are dynamic).
 
 ## ⚙️ Technical Details
 
