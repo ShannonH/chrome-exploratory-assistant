@@ -369,6 +369,11 @@ class SidePanelTestingAssistant {
         } else if (typeof timestamp === 'number') {
             return new Date(timestamp > 1000000000000 ? timestamp : timestamp * 1000);
         } else if (typeof timestamp === 'object' && timestamp !== null) {
+            // Check for empty objects first - CRITICAL FIX
+            if (Object.keys(timestamp).length === 0) {
+                return null;
+            }
+            
             if (timestamp.getTime && typeof timestamp.getTime === 'function') {
                 return new Date(timestamp.getTime());
             } else if (timestamp.$date) {
@@ -378,6 +383,7 @@ class SidePanelTestingAssistant {
                 const nanoseconds = timestamp._nanoseconds || timestamp.nanoseconds || 0;
                 return new Date(seconds * 1000 + nanoseconds / 1000000);
             } else {
+
                 // Try to extract a valid date from the object
                 const date = new Date(timestamp.toString());
                 return isNaN(date.getTime()) ? null : date;
@@ -390,52 +396,20 @@ class SidePanelTestingAssistant {
 
     formatTimestamp(timestamp) {
         try {
-            let date;
-            
             // If no timestamp is provided, return a placeholder instead of current time
             if (!timestamp) {
                 return 'No timestamp';
             }
             
-            // Handle multiple timestamp formats
-            if (timestamp instanceof Date) {
-                date = timestamp;
-            } else if (typeof timestamp === 'string') {
-                // Handle ISO strings and other formats
-                date = new Date(timestamp);
-            } else if (typeof timestamp === 'number') {
-                // Handle Unix timestamps (both seconds and milliseconds)
-                date = new Date(timestamp > 1000000000000 ? timestamp : timestamp * 1000);
-            } else if (typeof timestamp === 'object' && timestamp !== null) {
-                // Handle objects that might be serialized Date objects
-                if (timestamp.getTime && typeof timestamp.getTime === 'function') {
-                    // It's a Date-like object
-                    date = new Date(timestamp.getTime());
-                } else if (timestamp.$date) {
-                    // MongoDB-style date object
-                    date = new Date(timestamp.$date);
-                } else if (timestamp._seconds || timestamp.seconds) {
-                    // Firestore-style timestamp
-                    const seconds = timestamp._seconds || timestamp.seconds;
-                    const nanoseconds = timestamp._nanoseconds || timestamp.nanoseconds || 0;
-                    date = new Date(seconds * 1000 + nanoseconds / 1000000);
-                } else {
-                    // Try to convert the object to a string and then to a date
-                    date = new Date(timestamp.toString());
-                }
-            } else {
-                // Fallback: try to convert whatever we got
-                date = new Date(timestamp);
-            }
+            // Use normalizeTimestamp to handle all the various timestamp formats
+            const normalizedDate = this.normalizeTimestamp(timestamp);
             
-            // Verify the date is valid
-            if (isNaN(date.getTime())) {
-                console.warn('Invalid timestamp detected:', timestamp, 'Type:', typeof timestamp);
-                // Return a more helpful error message showing what we tried to parse
+            // If normalization failed, return an error message
+            if (!normalizedDate) {
                 return `Invalid timestamp (${typeof timestamp}: ${String(timestamp).substring(0, 50)})`;
             }
             
-            return date.toLocaleString();
+            return normalizedDate.toLocaleString();
         } catch (error) {
             console.error('Error formatting timestamp:', error, timestamp);
             return `Error formatting timestamp (${typeof timestamp}: ${String(timestamp).substring(0, 50)})`;
@@ -443,12 +417,31 @@ class SidePanelTestingAssistant {
     }
 
     saveData() {
+        // Properly serialize Date objects to prevent empty object corruption
+        const serializedTestSteps = this.testSteps.map(step => ({
+            ...step,
+            timestamp: step.timestamp instanceof Date ? step.timestamp.toISOString() : step.timestamp,
+            markedTimestamp: step.markedTimestamp instanceof Date ? step.markedTimestamp.toISOString() : step.markedTimestamp,
+            // Also serialize timestamps in step-level screenshots
+            screenshots: step.screenshots ? step.screenshots.map(screenshot => ({
+                ...screenshot,
+                timestamp: screenshot.timestamp instanceof Date ? screenshot.timestamp.toISOString() : screenshot.timestamp
+            })) : step.screenshots
+        }));
+        
+        const serializedScreenshots = this.screenshots.map(screenshot => ({
+            ...screenshot,
+            timestamp: screenshot.timestamp instanceof Date ? screenshot.timestamp.toISOString() : screenshot.timestamp
+        }));
+        
         const data = {
             currentSession: this.currentSession,
-            testSteps: this.testSteps,
-            screenshots: this.screenshots,
+            testSteps: serializedTestSteps,
+            screenshots: serializedScreenshots,
             // Script data now stored within testSteps with fromScript flag
         };
+        
+
         
         chrome.storage.local.set({ testingAssistantData: data });
     }
@@ -470,7 +463,16 @@ class SidePanelTestingAssistant {
                         step.timestamp = this.normalizeTimestamp(step.timestamp);
                     }
                     if (step.markedTimestamp) {
-                        step.markedTimestamp = this.normalizeTimestamp(step.markedTimestamp);
+                        const normalized = this.normalizeTimestamp(step.markedTimestamp);
+                        step.markedTimestamp = normalized; // Could be null for invalid timestamps
+                    }
+                    // Also normalize timestamps in step-level screenshots
+                    if (step.screenshots) {
+                        step.screenshots.forEach(screenshot => {
+                            if (screenshot.timestamp) {
+                                screenshot.timestamp = this.normalizeTimestamp(screenshot.timestamp);
+                            }
+                        });
                     }
                 });
                 
@@ -510,7 +512,16 @@ class SidePanelTestingAssistant {
                         step.timestamp = this.normalizeTimestamp(step.timestamp);
                     }
                     if (step.markedTimestamp) {
-                        step.markedTimestamp = this.normalizeTimestamp(step.markedTimestamp);
+                        const normalized = this.normalizeTimestamp(step.markedTimestamp);
+                        step.markedTimestamp = normalized; // Could be null for invalid timestamps
+                    }
+                    // Also normalize timestamps in step-level screenshots
+                    if (step.screenshots) {
+                        step.screenshots.forEach(screenshot => {
+                            if (screenshot.timestamp) {
+                                screenshot.timestamp = this.normalizeTimestamp(screenshot.timestamp);
+                            }
+                        });
                     }
                 });
                 shouldUpdate = true;
