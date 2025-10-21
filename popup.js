@@ -1188,7 +1188,12 @@ class TestingAssistant {
         const serializedTestSteps = this.testSteps.map(step => ({
             ...step,
             timestamp: step.timestamp instanceof Date ? step.timestamp.toISOString() : step.timestamp,
-            markedTimestamp: step.markedTimestamp instanceof Date ? step.markedTimestamp.toISOString() : step.markedTimestamp
+            markedTimestamp: step.markedTimestamp instanceof Date ? step.markedTimestamp.toISOString() : step.markedTimestamp,
+            // Also serialize timestamps in step-level screenshots
+            screenshots: step.screenshots ? step.screenshots.map(screenshot => ({
+                ...screenshot,
+                timestamp: screenshot.timestamp instanceof Date ? screenshot.timestamp.toISOString() : screenshot.timestamp
+            })) : step.screenshots
         }));
         
         const serializedScreenshots = this.screenshots.map(screenshot => ({
@@ -1245,6 +1250,14 @@ class TestingAssistant {
                     if (step.markedTimestamp) {
                         const normalized = this.normalizeTimestamp(step.markedTimestamp);
                         step.markedTimestamp = normalized; // Could be null for invalid timestamps
+                    }
+                    // Also normalize timestamps in step-level screenshots
+                    if (step.screenshots) {
+                        step.screenshots.forEach(screenshot => {
+                            if (screenshot.timestamp) {
+                                screenshot.timestamp = this.normalizeTimestamp(screenshot.timestamp);
+                            }
+                        });
                     }
                 });
                 
