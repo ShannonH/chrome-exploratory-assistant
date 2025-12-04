@@ -9,6 +9,9 @@ class TestingAssistant {
         this.selectedStepIndex = null; // Track which step is selected for pass/fail actions
         // Legacy script tracking removed - now using testSteps directly
         
+        // Initialize import parser
+        this.importParser = new ImportParser();
+        
         this.initializeUI();
         this.loadSavedData();
         
@@ -52,6 +55,7 @@ class TestingAssistant {
         document.getElementById('fileInput').addEventListener('change', (e) => this.handleFileUpload(e));
         document.getElementById('loadScript').addEventListener('click', () => this.loadScript());
         document.getElementById('clearScript').addEventListener('click', () => this.clearScript());
+        document.getElementById('downloadTemplate').addEventListener('click', () => this.downloadTemplate());
 
         // Export tab
         document.getElementById('exportData').addEventListener('click', () => this.exportData());
@@ -440,9 +444,28 @@ class TestingAssistant {
     }
 
     readScriptFile(file) {
+        // Check file extension
+        const fileName = file.name.toLowerCase();
+        const isSupported = fileName.endsWith('.txt') || 
+                           fileName.endsWith('.md') || 
+                           fileName.endsWith('.csv');
+        
+        if (!isSupported) {
+            this.showNotification('Unsupported file format. Please use .txt, .md, or .csv files.', 'error');
+            return;
+        }
+
         const reader = new FileReader();
         reader.onload = (e) => {
             document.getElementById('scriptText').value = e.target.result;
+            
+            // Show notification about successful file read
+            const fileType = fileName.endsWith('.csv') ? 'CSV' : 'text';
+            this.showNotification(`${fileType} file loaded successfully. Click "Load Script" to import.`, 'success');
+        };
+        reader.onerror = (e) => {
+            console.error('File read error:', e);
+            this.showNotification('Failed to read file. Please try again.', 'error');
         };
         reader.readAsText(file);
     }
@@ -454,39 +477,158 @@ class TestingAssistant {
             return;
         }
 
-        // Parse script into test steps and add them to the main test steps
-        const scriptSteps = scriptText.split('\n')
-            .map(line => line.trim())
-            .filter(line => line && !line.startsWith('#'))
-            .map(line => line.replace(/^\d+\.\s*/, '')); // Remove numbering
+        try {
+            // Get import options
+            const importType = document.querySelector('input[name="importType"]:checked')?.value || 'steps';
+            const validateSteps = document.getElementById('validateSteps')?.checked ?? true;
+            const preserveSections = document.getElementById('preserveSections')?.checked ?? true;
 
-        // Add each script step as a test step
-        scriptSteps.forEach(stepText => {
-            const step = {
-                id: Date.now() + Math.random(), // Ensure unique IDs
-                description: stepText,
+            // Detect format (CSV or text)
+            const format = scriptText.includes(',') && 
+                          (scriptText.toLowerCase().includes('feature') || 
+                           scriptText.toLowerCase().includes('test') ||
+                           scriptText.toLowerCase().includes('step')) ? 'csv' : 'txt';
+
+            // Parse the script
+            const parsed = this.importParser.parse(scriptText, format, {
+                importType,
+                validateSteps,
+                preserveSections
+            });
+
+            // Show validation errors/warnings if any
+            if (parsed.validation && !parsed.validation.valid) {
+                const errorMsg = parsed.validation.errors.map(e => 
+                    `Line ${e.line}: ${e.message}`
+                ).join('\n');
+                
+                if (!confirm(`Found ${parsed.validation.errors.length} validation error(s):\n\n${errorMsg}\n\nContinue anyway?`)) {
+                    return;
+                }
+            }
+
+            if (parsed.validation && parsed.validation.warnings.length > 0) {
+                const warningMsg = parsed.validation.warnings.slice(0, 5).map(w => 
+                    `Line ${w.line}: ${w.message}`
+                ).join('\n');
+                console.warn('Import warnings:', parsed.validation.warnings);
+                this.showNotification(`Import completed with ${parsed.validation.warnings.length} warning(s). Check console for details.`, 'warning');
+            }
+
+            // Convert parsed data to test steps
+            const newSteps = this.importParser.convertToTestSteps(parsed, {
+                importType,
                 status: 'pending',
-                screenshots: [],
-                fromScript: true // Mark as script-generated
-            };
-            this.testSteps.push(step);
-        });
+                markAsFromScript: true
+            });
 
-        // Update the main view to show the steps
-        this.updateStepsList();
-        this.updateSessionInfo();
-        this.saveData();
-        
-        // Switch to the main test session tab to show the loaded steps
-        this.switchTab('test');
-        
-        this.showNotification(`Script loaded: ${scriptSteps.length} steps added`, 'success');
+            // Add steps to existing test steps
+            newSteps.forEach(step => {
+                this.testSteps.push(step);
+            });
+
+            // Update the main view to show the steps
+            this.updateStepsList();
+            this.updateSessionInfo();
+            this.saveData();
+            
+            // Switch to the main test session tab to show the loaded steps
+            this.switchTab('test');
+            
+            // Show success message with details
+            let message = `Script loaded: ${newSteps.length} items added`;
+            if (parsed.metadata.hasSections) {
+                message += ` (${parsed.sections.length} sections)`;
+            }
+            if (parsed.metadata.hasHierarchy) {
+                message += ` (${parsed.tests.length} test cases)`;
+            }
+            
+            this.showNotification(message, 'success');
+            
+        } catch (error) {
+            console.error('Failed to load script:', error);
+            this.showNotification(`Failed to load script: ${error.message}`, 'error');
+        }
     }
 
     clearScript() {
         document.getElementById('scriptText').value = '';
         document.getElementById('scriptProgress').style.display = 'none';
         this.saveData();
+    }
+
+    async downloadTemplate() {
+        // Show template format options
+        const format = await this.showTemplateFormatDialog();
+        if (!format) return;
+
+        try {
+            const content = this.importParser.generateTemplate(format);
+            const blob = new Blob([content], { 
+                type: format === 'csv' ? 'text/csv' : 'text/plain' 
+            });
+            const filename = `test-template-${Date.now()}.${format}`;
+            
+            this.downloadBlob(blob, filename);
+            this.showNotification(`Template downloaded: ${filename}`, 'success');
+        } catch (error) {
+            console.error('Failed to download template:', error);
+            this.showNotification('Failed to download template', 'error');
+        }
+    }
+
+    showTemplateFormatDialog() {
+        return new Promise((resolve) => {
+            const dialog = document.createElement('div');
+            dialog.className = 'modal-overlay';
+            dialog.innerHTML = `
+                <div class="modal-content" style="max-width: 400px;">
+                    <div class="modal-header">
+                        <h3>Choose Template Format</h3>
+                    </div>
+                    <div class="modal-body">
+                        <p>Select the template format you'd like to download:</p>
+                        <div style="margin: 20px 0;">
+                            <label class="radio-label" style="display: block; margin: 10px 0;">
+                                <input type="radio" name="templateFormat" value="txt" checked>
+                                <span>Text Format (.txt) - Supports sections, numbered steps, and hierarchical naming</span>
+                            </label>
+                            <label class="radio-label" style="display: block; margin: 10px 0;">
+                                <input type="radio" name="templateFormat" value="csv">
+                                <span>CSV Format (.csv) - Structured with columns for Feature, Story, Test, Step</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-primary" id="confirmTemplate">Download</button>
+                        <button class="btn btn-secondary" id="cancelTemplate">Cancel</button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(dialog);
+            
+            document.getElementById('confirmTemplate').addEventListener('click', () => {
+                const selected = document.querySelector('input[name="templateFormat"]:checked');
+                const format = selected ? selected.value : 'txt';
+                dialog.remove();
+                resolve(format);
+            });
+            
+            document.getElementById('cancelTemplate').addEventListener('click', () => {
+                dialog.remove();
+                resolve(null);
+            });
+            
+            // Close on background click
+            dialog.addEventListener('click', (e) => {
+                if (e.target === dialog) {
+                    dialog.remove();
+                    resolve(null);
+                }
+            });
+        });
     }
 
     exportData() {

@@ -1,0 +1,33 @@
+Feature,User Story,Test Case,Step,Step Description
+Login,User Login,Valid Login,1,Navigate to login page
+Login,User Login,Valid Login,2,Enter valid username
+Login,User Login,Valid Login,3,Enter valid password
+Login,User Login,Valid Login,4,Click login button
+Login,User Login,Valid Login,5,Verify successful redirect to dashboard
+Login,User Login,Invalid Login,1,Navigate to login page
+Login,User Login,Invalid Login,2,Enter invalid credentials
+Login,User Login,Invalid Login,3,Click login button
+Login,User Login,Invalid Login,4,Verify error message is displayed
+Search,Product Search,Search by Name,1,Navigate to search page
+Search,Product Search,Search by Name,2,Enter product name in search box
+Search,Product Search,Search by Name,3,Click search button
+Search,Product Search,Search by Name,4,Verify relevant results are displayed
+Search,Product Search,Filter Results,1,Perform a search
+Search,Product Search,Filter Results,2,Apply price filter
+Search,Product Search,Filter Results,3,Verify filtered results
+Search,Product Search,Filter Results,4,Apply category filter
+Search,Product Search,Filter Results,5,Verify category filtered results
+Cart,Shopping Cart,Add to Cart,1,Select a product
+Cart,Shopping Cart,Add to Cart,2,Click add to cart button
+Cart,Shopping Cart,Add to Cart,3,Verify cart icon updates
+Cart,Shopping Cart,Add to Cart,4,Navigate to cart
+Cart,Shopping Cart,Add to Cart,5,Verify product is in cart
+
+# Notes:
+# - First row is the header (Feature, User Story, Test Case, Step, Step Description)
+# - Each subsequent row represents a test step
+# - Feature: The high-level feature being tested
+# - User Story: The user story or subfeature
+# - Test Case: The specific test case name
+# - Step: The step number within the test case
+# - Step Description: The detailed description of what to test

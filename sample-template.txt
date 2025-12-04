@@ -1,0 +1,42 @@
+# Sample Test Script Template
+
+# Feature/User Story Format Examples
+# You can use hierarchical naming to organize tests
+Feature Name/User Story/Test Case Name
+Feature Name/Login/Valid Credentials
+Feature Name/Login/Invalid Credentials
+Feature Name/Profile/Update Information
+
+# Traditional Numbered Steps Format
+# Login Functionality Testing
+1. Navigate to the login page
+2. Verify login form is displayed correctly
+3. Test with valid credentials
+4. Verify successful login redirect
+5. Test with invalid credentials
+6. Verify error message display
+7. Test password reset functionality
+
+# Product Search and Browse
+8. Navigate to product catalog
+9. Test search functionality with valid product name
+10. Verify search results are relevant
+11. Test filtering options (price, category, brand)
+12. Test sorting options (price, popularity, ratings)
+13. Verify product details page loads correctly
+
+# You can also mix formats - sections with steps
+# Shopping Cart Functionality
+14. Add product to cart from product page
+15. Verify cart counter updates
+16. Navigate to shopping cart
+17. Verify product appears in cart
+18. Test quantity adjustment
+19. Test item removal from cart
+
+# Notes:
+# - Lines starting with # are section headers
+# - Lines with numbers (1., 2., etc.) are test steps
+# - Lines with / (Feature/Story/Test) are hierarchical test cases
+# - Blank lines are ignored
+# - You can mix different formats as needed

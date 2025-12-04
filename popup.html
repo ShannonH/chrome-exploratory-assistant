@@ -100,8 +100,8 @@
 
                 <div class="upload-area" id="uploadArea">
                     <div class="upload-icon">📄</div>
-                    <p>Drag & drop a text file or click to browse</p>
-                    <input type="file" id="fileInput" accept=".txt,.md" hidden>
+                    <p>Drag & drop a text or CSV file or click to browse</p>
+                    <input type="file" id="fileInput" accept=".txt,.md,.csv" hidden>
                 </div>
 
                 <div class="script-textarea">
@@ -110,18 +110,55 @@
                             <span class="btn-icon">🔍</span>
                             Expand
                         </button>
+                        <button id="downloadTemplate" class="btn btn-small btn-outline" title="Download a template file">
+                            <span class="btn-icon">⬇️</span>
+                            Download Template
+                        </button>
                     </div>
                     <textarea id="scriptText" placeholder="Or paste your test script here...
 
-Example:
+Supported Formats:
+1. Numbered steps: 1. Step description
+2. Section headers: # Section Name
+3. Hierarchical: Feature/UserStory/TestCase
+4. CSV: Feature,UserStory,TestCase,Step,Description
+
+Examples:
+# Login Testing
 1. Navigate to login page
 2. Enter valid credentials
-3. Click login button
-4. Verify successful login
-5. Navigate to user profile
-6. Update profile information
-7. Save changes
-8. Verify updates are saved"></textarea>
+3. Verify successful login
+
+Feature/Login/Valid Credentials
+Feature/Login/Invalid Password"></textarea>
+                </div>
+
+                <div class="import-options">
+                    <h4>Import Options</h4>
+                    <div class="import-settings">
+                        <label class="radio-label">
+                            <input type="radio" name="importType" value="steps" checked>
+                            <span>Import Steps Only</span>
+                        </label>
+                        <label class="radio-label">
+                            <input type="radio" name="importType" value="tests">
+                            <span>Import Test Cases Only</span>
+                        </label>
+                        <label class="radio-label">
+                            <input type="radio" name="importType" value="both">
+                            <span>Import Both</span>
+                        </label>
+                    </div>
+                    <div class="import-checkboxes">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="validateSteps" checked>
+                            <span>Validate steps on import</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="preserveSections" checked>
+                            <span>Preserve section information</span>
+                        </label>
+                    </div>
                 </div>
 
                 <div class="script-actions">
@@ -210,6 +247,7 @@ Example:
         </div>
     </div>
 
+    <script src="import-parser.js"></script>
     <script src="popup.js"></script>
 </body>
 </html>
