@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Import Parser Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+        }
+        h2 {
+            color: #6366f1;
+            margin-top: 0;
+        }
+        .test-result {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .test-pass {
+            background-color: #d1fae5;
+            border-left: 4px solid #10b981;
+        }
+        .test-fail {
+            background-color: #fee2e2;
+            border-left: 4px solid #ef4444;
+        }
+        pre {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+        button {
+            background: #6366f1;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #5558e3;
+        }
+        .stats {
+            display: flex;
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .stat-box {
+            flex: 1;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            text-align: center;
+        }
+        .stat-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #6366f1;
+        }
+        .stat-label {
+            color: #666;
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Import Parser Test Suite</h1>
+    
+    <div class="test-section">
+        <h2>Test Controls</h2>
+        <button onclick="runAllTests()">Run All Tests</button>
+        <button onclick="clearResults()">Clear Results</button>
+    </div>
+
+    <div class="test-section">
+        <h2>Test Statistics</h2>
+        <div class="stats">
+            <div class="stat-box">
+                <div class="stat-number" id="totalTests">0</div>
+                <div class="stat-label">Total Tests</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number" id="passedTests">0</div>
+                <div class="stat-label">Passed</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number" id="failedTests">0</div>
+                <div class="stat-label">Failed</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="results"></div>
+
+    <script src="import-parser.js"></script>
+    <script>
+        const parser = new ImportParser();
+        let testResults = { total: 0, passed: 0, failed: 0 };
+
+        function addResult(name, passed, message, details = null) {
+            testResults.total++;
+            if (passed) {
+                testResults.passed++;
+            } else {
+                testResults.failed++;
+            }
+            
+            updateStats();
+            
+            const resultsDiv = document.getElementById('results');
+            const resultDiv = document.createElement('div');
+            resultDiv.className = 'test-section';
+            
+            let html = `
+                <h2>${name}</h2>
+                <div class="test-result ${passed ? 'test-pass' : 'test-fail'}">
+                    <strong>${passed ? '✅ PASS' : '❌ FAIL'}</strong>: ${message}
+                </div>
+            `;
+            
+            if (details) {
+                html += `<pre>${JSON.stringify(details, null, 2)}</pre>`;
+            }
+            
+            resultDiv.innerHTML = html;
+            resultsDiv.appendChild(resultDiv);
+        }
+
+        function updateStats() {
+            document.getElementById('totalTests').textContent = testResults.total;
+            document.getElementById('passedTests').textContent = testResults.passed;
+            document.getElementById('failedTests').textContent = testResults.failed;
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+            testResults = { total: 0, passed: 0, failed: 0 };
+            updateStats();
+        }
+
+        function testSimpleNumberedSteps() {
+            const input = `1. First step
+2. Second step
+3. Third step`;
+            
+            const result = parser.parse(input, 'txt', { importType: 'steps' });
+            const passed = result.steps.length === 3 && 
+                          result.steps[0].description === 'First step' &&
+                          result.steps[1].description === 'Second step';
+            
+            addResult(
+                'Test: Simple Numbered Steps',
+                passed,
+                `Parsed ${result.steps.length} steps`,
+                result
+            );
+        }
+
+        function testSectionHeaders() {
+            const input = `# Login Tests
+1. Navigate to login
+2. Enter credentials
+
+# Profile Tests
+3. Update profile
+4. Save changes`;
+            
+            const result = parser.parse(input, 'txt', { importType: 'steps' });
+            const passed = result.sections.length === 2 &&
+                          result.sections[0].name === 'Login Tests' &&
+                          result.sections[1].name === 'Profile Tests' &&
+                          result.steps.length === 4;
+            
+            addResult(
+                'Test: Section Headers',
+                passed,
+                `Found ${result.sections.length} sections with ${result.steps.length} steps`,
+                result
+            );
+        }
+
+        function testHierarchicalNaming() {
+            const input = `Feature/Login/Valid Credentials
+Feature/Login/Invalid Password
+Feature/Profile/Update Info`;
+            
+            const result = parser.parse(input, 'txt', { importType: 'tests' });
+            const passed = result.tests.length === 3 &&
+                          result.tests[0].hierarchy.length === 3 &&
+                          result.tests[0].feature === 'Feature';
+            
+            addResult(
+                'Test: Hierarchical Naming',
+                passed,
+                `Parsed ${result.tests.length} hierarchical test cases`,
+                result
+            );
+        }
+
+        function testCSVFormat() {
+            const input = `Feature,User Story,Test Case,Step,Step Description
+Login,User Auth,Valid Login,1,Enter username
+Login,User Auth,Valid Login,2,Enter password
+Login,User Auth,Valid Login,3,Click submit`;
+            
+            const result = parser.parse(input, 'csv', { importType: 'steps' });
+            const passed = result.tests.length >= 1 &&
+                          result.steps.length === 3 &&
+                          result.steps[0].description === 'Enter username';
+            
+            addResult(
+                'Test: CSV Format',
+                passed,
+                `Parsed ${result.steps.length} steps from CSV`,
+                result
+            );
+        }
+
+        function testMixedFormat() {
+            const input = `# Authentication Tests
+Feature/Login/Valid Login
+1. Navigate to login page
+2. Enter valid credentials
+
+# Error Handling
+Feature/Login/Invalid Login
+3. Enter invalid credentials
+4. Verify error message`;
+            
+            const result = parser.parse(input, 'txt', { importType: 'both' });
+            const passed = result.sections.length === 2 &&
+                          result.tests.length === 2 &&
+                          result.steps.length === 4;
+            
+            addResult(
+                'Test: Mixed Format',
+                passed,
+                `Parsed ${result.sections.length} sections, ${result.tests.length} tests, ${result.steps.length} steps`,
+                result
+            );
+        }
+
+        function testValidation() {
+            const input = `1. Valid step
+2. 
+3. Another valid step`;
+            
+            const result = parser.parse(input, 'txt', { validateSteps: true });
+            const passed = result.validation && 
+                          result.validation.errors.length > 0 &&
+                          !result.validation.valid;
+            
+            addResult(
+                'Test: Validation',
+                passed,
+                `Detected ${result.validation.errors.length} validation errors`,
+                result.validation
+            );
+        }
+
+        function testConvertToTestSteps() {
+            const input = `1. First step
+2. Second step`;
+            
+            const parsed = parser.parse(input, 'txt', { importType: 'steps' });
+            const steps = parser.convertToTestSteps(parsed, { 
+                status: 'pending',
+                markAsFromScript: true 
+            });
+            
+            const passed = steps.length === 2 &&
+                          steps[0].status === 'pending' &&
+                          steps[0].fromScript === true;
+            
+            addResult(
+                'Test: Convert to Test Steps',
+                passed,
+                `Converted ${steps.length} items to test steps format`,
+                steps
+            );
+        }
+
+        function testTemplateGeneration() {
+            const txtTemplate = parser.generateTemplate('txt');
+            const csvTemplate = parser.generateTemplate('csv');
+            
+            const passed = txtTemplate.length > 100 &&
+                          csvTemplate.length > 100 &&
+                          txtTemplate.includes('#') &&
+                          csvTemplate.includes('Feature,');
+            
+            addResult(
+                'Test: Template Generation',
+                passed,
+                `Generated templates: TXT (${txtTemplate.length} chars), CSV (${csvTemplate.length} chars)`,
+                { 
+                    txtPreview: txtTemplate.substring(0, 200) + '...',
+                    csvPreview: csvTemplate.substring(0, 200) + '...'
+                }
+            );
+        }
+
+        function testBackwardCompatibility() {
+            // Old format - simple numbered list without sections
+            const oldInput = `1. Navigate to login page
+2. Enter valid credentials
+3. Click login button
+4. Verify successful login`;
+            
+            const result = parser.parse(oldInput, 'txt', { importType: 'steps' });
+            const steps = parser.convertToTestSteps(result, { status: 'pending' });
+            
+            const passed = result.steps.length === 4 &&
+                          steps.length === 4 &&
+                          steps[0].description === 'Navigate to login page';
+            
+            addResult(
+                'Test: Backward Compatibility',
+                passed,
+                `Old format still works: ${steps.length} steps imported`,
+                steps
+            );
+        }
+
+        function testEmptyInput() {
+            const result = parser.parse('', 'txt', { importType: 'steps' });
+            const passed = result.steps.length === 0 &&
+                          result.tests.length === 0 &&
+                          result.sections.length === 0;
+            
+            addResult(
+                'Test: Empty Input',
+                passed,
+                'Empty input handled correctly',
+                result
+            );
+        }
+
+        function runAllTests() {
+            clearResults();
+            
+            console.log('Running test suite...');
+            
+            testSimpleNumberedSteps();
+            testSectionHeaders();
+            testHierarchicalNaming();
+            testCSVFormat();
+            testMixedFormat();
+            testValidation();
+            testConvertToTestSteps();
+            testTemplateGeneration();
+            testBackwardCompatibility();
+            testEmptyInput();
+            
+            console.log('Test suite completed!');
+            console.log(`Results: ${testResults.passed}/${testResults.total} passed`);
+        }
+
+        // Auto-run tests on page load
+        window.addEventListener('load', () => {
+            setTimeout(runAllTests, 500);
+        });
+    </script>
+</body>
+</html>

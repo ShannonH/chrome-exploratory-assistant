@@ -102,7 +102,7 @@ class ImportParser {
             }
 
             // Parse numbered steps (1. Step description)
-            const numberedMatch = line.match(/^(\d+)\.\s*(.+)$/);
+            const numberedMatch = line.match(/^(\d+)\.\s*(.*)$/);
             if (numberedMatch) {
                 const step = {
                     number: parseInt(numberedMatch[1]),
@@ -184,17 +184,12 @@ class ImportParser {
             const values = this.parseCSVLine(lines[i]);
             if (values.length === 0) continue;
 
-            const row = {};
-            header.forEach((col, idx) => {
-                row[col.toLowerCase()] = values[idx] || '';
-            });
-
-            // Build hierarchical structure
-            const feature = row[columnMap.feature] || row.feature || '';
-            const userStory = row[columnMap.userstory] || row.userstory || row.story || '';
-            const testCase = row[columnMap.testcase] || row.testcase || row.test || '';
-            const stepNum = row[columnMap.step] || row.step || '';
-            const description = row[columnMap.description] || row.description || '';
+            // Build hierarchical structure using column indexes
+            const feature = columnMap.feature >= 0 ? values[columnMap.feature] : '';
+            const userStory = columnMap.userstory >= 0 ? values[columnMap.userstory] : '';
+            const testCase = columnMap.testcase >= 0 ? values[columnMap.testcase] : '';
+            const stepNum = columnMap.step >= 0 ? values[columnMap.step] : '';
+            const description = columnMap.description >= 0 ? values[columnMap.description] : '';
 
             // Create or find test case
             let test = result.tests.find(t => 
