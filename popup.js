@@ -479,15 +479,28 @@ class TestingAssistant {
 
         try {
             // Get import options
-            const importType = document.querySelector('input[name="importType"]:checked')?.value || 'steps';
-            const validateSteps = document.getElementById('validateSteps')?.checked ?? true;
-            const preserveSections = document.getElementById('preserveSections')?.checked ?? true;
+            const importTypeEl = document.querySelector('input[name="importType"]:checked');
+            const importType = importTypeEl ? importTypeEl.value : 'steps';
+            
+            const validateStepsEl = document.getElementById('validateSteps');
+            const validateSteps = validateStepsEl ? validateStepsEl.checked : true;
+            
+            const preserveSectionsEl = document.getElementById('preserveSections');
+            const preserveSections = preserveSectionsEl ? preserveSectionsEl.checked : true;
 
-            // Detect format (CSV or text)
-            const format = scriptText.includes(',') && 
-                          (scriptText.toLowerCase().includes('feature') || 
-                           scriptText.toLowerCase().includes('test') ||
-                           scriptText.toLowerCase().includes('step')) ? 'csv' : 'txt';
+            // Detect format - check for CSV structure (comma-separated with headers)
+            let format = 'txt';
+            const lines = scriptText.split('\n');
+            if (lines.length > 0) {
+                const firstLine = lines[0].toLowerCase();
+                // Check if first line looks like a CSV header
+                if (firstLine.includes(',') && 
+                    (firstLine.includes('feature') || 
+                     firstLine.includes('test case') || 
+                     firstLine.includes('step description'))) {
+                    format = 'csv';
+                }
+            }
 
             // Parse the script
             const parsed = this.importParser.parse(scriptText, format, {
@@ -522,10 +535,8 @@ class TestingAssistant {
                 markAsFromScript: true
             });
 
-            // Add steps to existing test steps
-            newSteps.forEach(step => {
-                this.testSteps.push(step);
-            });
+            // Add steps to existing test steps (use spread for better performance)
+            this.testSteps.push(...newSteps);
 
             // Update the main view to show the steps
             this.updateStepsList();

@@ -243,12 +243,15 @@ class ImportParser {
 
         for (let i = 0; i < line.length; i++) {
             const char = line[i];
+            const nextChar = i + 1 < line.length ? line[i + 1] : null;
             
             if (char === '"') {
-                if (inQuotes && line[i + 1] === '"') {
+                if (inQuotes && nextChar === '"') {
+                    // Escaped quote
                     current += '"';
                     i++;
                 } else {
+                    // Toggle quote mode
                     inQuotes = !inQuotes;
                 }
             } else if (char === ',' && !inQuotes) {
@@ -275,11 +278,19 @@ class ImportParser {
         map.userstory = lowerHeader.findIndex(h => h.includes('story') || h.includes('user'));
         map.testcase = lowerHeader.findIndex(h => h.includes('test') || h.includes('case'));
         map.step = lowerHeader.findIndex(h => h.includes('step') || h === '#' || h === 'no');
-        map.description = lowerHeader.findIndex(h => h.includes('description') || h.includes('detail') || h === 'step description');
+        map.description = lowerHeader.findIndex(h => 
+            h.includes('description') || 
+            h.includes('detail') || 
+            h === 'step description' ||
+            h.includes('action')
+        );
 
-        // Use first unmatched column for description if not found
+        // Only use last column as fallback if we found at least some other columns
         if (map.description === -1) {
-            map.description = header.length - 1;
+            const foundColumns = [map.feature, map.userstory, map.testcase, map.step].filter(idx => idx !== -1);
+            if (foundColumns.length > 0) {
+                map.description = header.length - 1;
+            }
         }
 
         return map;
@@ -339,12 +350,13 @@ class ImportParser {
         } = options;
 
         const steps = [];
+        let idCounter = Date.now();
 
         if (importType === 'steps' || importType === 'both') {
             // Import individual steps
             parsed.steps.forEach(step => {
                 steps.push({
-                    id: Date.now() + Math.random(),
+                    id: idCounter++, // Use incrementing counter for unique IDs
                     description: step.description,
                     status: status,
                     screenshots: [],
@@ -366,7 +378,7 @@ class ImportParser {
             parsed.tests.forEach(test => {
                 const description = test.fullPath || test.name;
                 steps.push({
-                    id: Date.now() + Math.random(),
+                    id: idCounter++, // Use incrementing counter for unique IDs
                     description: description,
                     status: status,
                     screenshots: [],
