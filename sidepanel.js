@@ -377,13 +377,17 @@ class SidePanelTestingAssistant {
         });
     }
 
-    async injectContentScript() {
+    async injectContentScript(tabId) {
         try {
-            const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+            if (!tabId) {
+                console.error('No tabId provided to injectContentScript');
+                return;
+            }
             await chrome.scripting.executeScript({
-                target: { tabId: tab.id },
+                target: { tabId: tabId },
                 files: ['content.js']
             });
+            console.log('Content script injected successfully for tab:', tabId);
         } catch (error) {
             console.error('Failed to inject content script:', error);
         }
@@ -691,7 +695,7 @@ class SidePanelTestingAssistant {
             } catch (error) {
                 // Content script might not be injected yet, try to inject it
                 try {
-                    await this.injectContentScript();
+                    await this.injectContentScript(tab.id);
                 } catch (injectError) {
                     console.log('Content script injection failed:', injectError);
                 }
@@ -780,7 +784,7 @@ class SidePanelTestingAssistant {
             } catch (error) {
                 // Content script might not be injected yet, try to inject it
                 try {
-                    await this.injectContentScript();
+                    await this.injectContentScript(tab.id);
                 } catch (injectError) {
                     console.log('Content script injection failed:', injectError);
                 }
