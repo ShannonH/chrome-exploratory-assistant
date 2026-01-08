@@ -658,20 +658,32 @@ class SidePanelTestingAssistant {
                 return;
             }
 
-            // Get the last focused window (not the sidepanel)
+            // Get all normal browser windows and find the one with an active tab
             const windows = await chrome.windows.getAll({ populate: true, windowTypes: ['normal'] });
-            const lastFocusedWindow = windows.sort((a, b) => b.id - a.id)[0];
+            
+            if (!windows || windows.length === 0) {
+                this.showNotification('No browser window found for screenshot', 'error');
+                console.error('No windows found');
+                return;
+            }
+            
+            // Find the last focused window by looking at lastFocused property
+            const lastFocusedWindow = windows.find(w => w.focused) || windows[0];
             
             if (!lastFocusedWindow) {
                 this.showNotification('No browser window found for screenshot', 'error');
+                console.error('No lastFocusedWindow found');
                 return;
             }
             
             const tab = lastFocusedWindow.tabs.find(t => t.active);
             if (!tab) {
                 this.showNotification('No active tab found for screenshot', 'error');
+                console.error('No active tab in window:', lastFocusedWindow.id);
                 return;
             }
+            
+            console.log('Taking screenshot from window:', lastFocusedWindow.id, 'tab:', tab.id);
             
             // Send message to content script to prepare for screenshot
             try {
@@ -686,13 +698,18 @@ class SidePanelTestingAssistant {
             }
             
             // Capture screenshot using background script message, pass window ID
+            console.log('Sending CAPTURE_SCREENSHOT message with windowId:', lastFocusedWindow.id);
             const response = await chrome.runtime.sendMessage({ 
                 action: 'CAPTURE_SCREENSHOT',
                 windowId: lastFocusedWindow.id
             });
             
-            if (!response.success) {
-                throw new Error(response.error || 'Failed to capture screenshot');
+            console.log('CAPTURE_SCREENSHOT response:', response);
+            
+            if (!response || !response.success) {
+                const errorMsg = response?.error || 'No response from background script';
+                console.error('Screenshot capture failed:', errorMsg);
+                throw new Error(errorMsg);
             }
             
             const screenshot = {
@@ -703,6 +720,8 @@ class SidePanelTestingAssistant {
                 title: tab.title
             };
 
+            console.log('Screenshot captured, dataUrl length:', response.dataUrl?.length);
+
             this.screenshots.push(screenshot);
             
             this.updateSessionInfo();
@@ -710,6 +729,7 @@ class SidePanelTestingAssistant {
             
             // Show success feedback
             this.showNotification('Screenshot captured successfully!', 'success');
+            console.log('Screenshot saved successfully');
             
         } catch (error) {
             console.error('Screenshot error:', error);
@@ -727,20 +747,32 @@ class SidePanelTestingAssistant {
                 return;
             }
 
-            // Get the last focused window (not the sidepanel)
+            // Get all normal browser windows and find the one with an active tab
             const windows = await chrome.windows.getAll({ populate: true, windowTypes: ['normal'] });
-            const lastFocusedWindow = windows.sort((a, b) => b.id - a.id)[0];
+            
+            if (!windows || windows.length === 0) {
+                this.showNotification('No browser window found for screenshot', 'error');
+                console.error('No windows found');
+                return;
+            }
+            
+            // Find the last focused window by looking at lastFocused property
+            const lastFocusedWindow = windows.find(w => w.focused) || windows[0];
             
             if (!lastFocusedWindow) {
                 this.showNotification('No browser window found for screenshot', 'error');
+                console.error('No lastFocusedWindow found');
                 return;
             }
             
             const tab = lastFocusedWindow.tabs.find(t => t.active);
             if (!tab) {
                 this.showNotification('No active tab found for screenshot', 'error');
+                console.error('No active tab in window:', lastFocusedWindow.id);
                 return;
             }
+            
+            console.log('Taking screenshot from window:', lastFocusedWindow.id, 'tab:', tab.id);
             
             // Send message to content script to prepare for screenshot
             try {
@@ -755,13 +787,18 @@ class SidePanelTestingAssistant {
             }
             
             // Capture screenshot using background script message, pass window ID
+            console.log('Sending CAPTURE_SCREENSHOT message with windowId:', lastFocusedWindow.id);
             const response = await chrome.runtime.sendMessage({ 
                 action: 'CAPTURE_SCREENSHOT',
                 windowId: lastFocusedWindow.id
             });
             
-            if (!response.success) {
-                throw new Error(response.error || 'Failed to capture screenshot');
+            console.log('CAPTURE_SCREENSHOT response:', response);
+            
+            if (!response || !response.success) {
+                const errorMsg = response?.error || 'No response from background script';
+                console.error('Screenshot capture failed:', errorMsg);
+                throw new Error(errorMsg);
             }
             
             const screenshot = {
@@ -771,6 +808,8 @@ class SidePanelTestingAssistant {
                 url: tab.url,
                 title: tab.title
             };
+
+            console.log('Screenshot captured, dataUrl length:', response.dataUrl?.length);
 
             this.screenshots.push(screenshot);
             
@@ -782,12 +821,14 @@ class SidePanelTestingAssistant {
                 }
                 targetStep.screenshots.push(screenshot);
                 
+                console.log(`Screenshot added to step ${stepIndex + 1}, total screenshots:`, targetStep.screenshots.length);
                 this.updateStepsList(); // Update steps list to show associated screenshots
                 this.showNotification(`Screenshot associated with Step ${stepIndex + 1}!`, 'success');
             }
             
             this.updateSessionInfo();
             this.saveData();
+            console.log('Screenshot saved successfully');
             
         } catch (error) {
             console.error('Screenshot error:', error);
