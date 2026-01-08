@@ -669,10 +669,8 @@ body {
     margin: 0 -20px 16px -20px;
     border-radius: 0;
     box-shadow: var(--shadow-md);
-    position: sticky;
-    top: 0;
-    z-index: 100;
     position: relative;
+    z-index: 100;
 }
 
 .context-content {
