@@ -53,6 +53,7 @@ class TestingAssistant {
         document.getElementById('fileInput').addEventListener('change', (e) => this.handleFileUpload(e));
         document.getElementById('loadScript').addEventListener('click', () => this.loadScript());
         document.getElementById('clearScript').addEventListener('click', () => this.clearScript());
+        document.getElementById('downloadTemplate').addEventListener('click', () => this.downloadTemplate());
 
         // Export tab
         document.getElementById('exportData').addEventListener('click', () => this.exportData());
@@ -605,6 +606,65 @@ class TestingAssistant {
         this.contextMetadata = null;
         document.getElementById('contextHeader').style.display = 'none';
         this.saveData();
+    }
+
+    downloadTemplate() {
+        // Create a template file with example YAML frontmatter and checklist items
+        const template = `---
+Mission: [Your Test Mission Name]
+Charter: [Charter Number - Description]
+Persona: [Tester Persona with emoji]
+Tour: [Tour Type with emoji]
+ADO: [Work Item ID]
+---
+
+### Setup
+- [ ] [First setup step]
+- [ ] [Second setup step]
+
+### Execution
+- [ ] [First test action]
+- [ ] [Second test action]
+- [ ] [Third test action]
+
+### Verification
+- [ ] [First verification point]
+- [ ] [Second verification point]
+
+---
+## Template Instructions
+
+Replace the bracketed placeholders above with your actual test information:
+
+**YAML Frontmatter Fields:**
+- Mission: Brief name describing what you're testing
+- Charter: Charter number and description
+- Persona: The role/mindset you're testing as (e.g., "New User 👤", "Power User ⚡")
+- Tour: Testing approach (e.g., "Happy Path ✅", "Edge Cases 🔍", "Chaos Tour 🤯")
+- ADO: Azure DevOps or other work item ID
+
+**Checklist Items:**
+- Use \`- [ ]\` for pending/unchecked items
+- Use \`- [x]\` for completed/checked items
+- Only lines with checkboxes become test steps in the extension
+
+**Sections (Optional):**
+You can organize your steps with markdown headers like:
+- ### Setup
+- ### Execution
+- ### Verification
+- ### Cleanup
+
+Delete these instructions before using the template!
+---
+`;
+
+        // Create blob and download
+        const blob = new Blob([template], { type: 'text/markdown' });
+        const timestamp = new Date().toISOString().split('T')[0];
+        this.downloadBlob(blob, `test-template-${timestamp}.md`);
+        
+        this.showNotification('Template downloaded successfully!', 'success');
     }
 
     exportData() {
