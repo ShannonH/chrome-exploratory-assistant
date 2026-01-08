@@ -137,6 +137,9 @@ class SidePanelTestingAssistant {
             } else if (e.target.classList.contains('step-fail-btn') || e.target.closest('.step-fail-btn')) {
                 const stepIndex = parseInt(e.target.dataset.index || e.target.closest('.step-fail-btn').dataset.index);
                 this.markStep(stepIndex, 'fail');
+            } else if (e.target.classList.contains('step-screenshot-btn') || e.target.closest('.step-screenshot-btn')) {
+                const stepIndex = parseInt(e.target.dataset.index || e.target.closest('.step-screenshot-btn').dataset.index);
+                this.takeScreenshotForStep(stepIndex);
             }
         });
     }
@@ -309,6 +312,20 @@ class SidePanelTestingAssistant {
             const scriptIndicator = step.fromScript ? '📋 ' : '';
             const screenshotIndicator = (step.screenshots && step.screenshots.length > 0) ? ` 📸${step.screenshots.length}` : '';
             
+            // Generate screenshot display HTML if screenshots exist
+            let screenshotsHtml = '';
+            if (step.screenshots && step.screenshots.length > 0) {
+                screenshotsHtml = '<div class="step-screenshots">';
+                step.screenshots.forEach((screenshot, screenshotIndex) => {
+                    screenshotsHtml += `
+                        <div class="screenshot-preview">
+                            <img src="${screenshot.dataUrl}" alt="Screenshot ${screenshotIndex + 1}" class="screenshot-thumbnail">
+                        </div>
+                    `;
+                });
+                screenshotsHtml += '</div>';
+            }
+            
             stepElement.innerHTML = `
                 <div class="step-header">
                     <span class="step-number">${scriptIndicator}Step ${stepNumber}${screenshotIndicator}</span>
@@ -316,9 +333,11 @@ class SidePanelTestingAssistant {
                 </div>
                 <div class="step-description">${step.description}</div>
                 ${step.markedTimestamp ? `<div class="step-timestamp">${this.formatTimestamp(step.markedTimestamp)}</div>` : ''}
+                ${screenshotsHtml}
                 <div class="step-actions">
                     <button class="btn btn-mini btn-success step-pass-btn" data-index="${index}" title="Mark this step as Pass">✅ Pass</button>
                     <button class="btn btn-mini btn-danger step-fail-btn" data-index="${index}" title="Mark this step as Fail">❌ Fail</button>
+                    <button class="btn btn-mini btn-screenshot step-screenshot-btn" data-index="${index}" title="Take Screenshot for this step">📸 Screenshot</button>
                 </div>
             `;
             
@@ -627,13 +646,17 @@ class SidePanelTestingAssistant {
                 }
             }
             
-            // Capture screenshot
-            const dataUrl = await chrome.tabs.captureVisibleTab(null, { format: 'png' });
+            // Capture screenshot using background script message
+            const response = await chrome.runtime.sendMessage({ action: 'CAPTURE_SCREENSHOT' });
+            
+            if (!response.success) {
+                throw new Error(response.error || 'Failed to capture screenshot');
+            }
             
             const screenshot = {
                 id: Date.now(),
                 timestamp: new Date(),
-                dataUrl: dataUrl,
+                dataUrl: response.dataUrl,
                 url: tab.url,
                 title: tab.title
             };
@@ -682,13 +705,17 @@ class SidePanelTestingAssistant {
                 }
             }
             
-            // Capture screenshot
-            const dataUrl = await chrome.tabs.captureVisibleTab(null, { format: 'png' });
+            // Capture screenshot using background script message
+            const response = await chrome.runtime.sendMessage({ action: 'CAPTURE_SCREENSHOT' });
+            
+            if (!response.success) {
+                throw new Error(response.error || 'Failed to capture screenshot');
+            }
             
             const screenshot = {
                 id: Date.now(),
                 timestamp: new Date(),
-                dataUrl: dataUrl,
+                dataUrl: response.dataUrl,
                 url: tab.url,
                 title: tab.title
             };
@@ -711,6 +738,10 @@ class SidePanelTestingAssistant {
             this.saveData();
             
         } catch (error) {
+            console.error('Screenshot error:', error);
+            this.showFallbackActions();
+        }
+    }
             console.error('Screenshot error:', error);
             this.showFallbackActions();
         }

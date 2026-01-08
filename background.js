@@ -27,9 +27,9 @@ class BackgroundService {
             }
         });
 
-        // Handle extension icon click
+        // Handle extension icon click - open sidebar instead of popup
         chrome.action.onClicked.addListener((tab) => {
-            this.openPopup();
+            this.openSidePanel(tab);
         });
 
         // Context menu for quick actions
@@ -79,6 +79,15 @@ class BackgroundService {
                 case 'captureScreenshot':
                     const screenshot = await this.captureScreenshot(sender.tab);
                     sendResponse({ success: true, data: screenshot });
+                    break;
+
+                case 'CAPTURE_SCREENSHOT':
+                    // New message handler for sidebar screenshot capture
+                    const dataUrl = await chrome.tabs.captureVisibleTab(null, {
+                        format: 'png',
+                        quality: 90
+                    });
+                    sendResponse({ success: true, dataUrl: dataUrl });
                     break;
 
                 case 'saveTestStep':
