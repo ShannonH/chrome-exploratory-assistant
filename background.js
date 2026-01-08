@@ -27,11 +27,6 @@ class BackgroundService {
             }
         });
 
-        // Handle extension icon click - open sidebar instead of popup
-        chrome.action.onClicked.addListener((tab) => {
-            this.openSidePanel(tab);
-        });
-
         // Context menu for quick actions
         this.setupContextMenus();
 
