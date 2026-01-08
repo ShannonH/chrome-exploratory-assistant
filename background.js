@@ -79,7 +79,8 @@ class BackgroundService {
                 case 'CAPTURE_SCREENSHOT':
                     // New message handler for sidebar screenshot capture
                     try {
-                        const dataUrl = await chrome.tabs.captureVisibleTab(null, {
+                        const windowId = message.windowId || null;
+                        const dataUrl = await chrome.tabs.captureVisibleTab(windowId, {
                             format: 'png',
                             quality: 90
                         });
