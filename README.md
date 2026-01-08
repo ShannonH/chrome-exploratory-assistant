@@ -37,8 +37,30 @@ A Chrome extension for QA engineers and testers to document exploratory test ses
 
 ### 📋 Script-Guided Testing
 - 🗂️ Go to the "Test Script" tab in the popup.
-- 📤 Upload or paste your script. Steps are shown as a checklist.
+- 📤 Upload or paste your script in Markdown or YAML format. 
+- 🎯 **New Format Support**: Use YAML frontmatter to define test context (Mission, Charter, Persona, Tour, ADO)
+- ✅ Create checklist items using `- [ ]` for pending steps and `- [x]` for completed steps
+- 📊 Context metadata appears in a high-contrast header to keep you in character
 - ✅ Check off steps as you complete them.
+
+**Example Format:**
+```markdown
+---
+Mission: The Block Stacker
+Charter: 1 - Content Designer Siege
+Persona: Overwhelmed Instructor 🧑‍🏫
+Tour: Chaos Tour 🤯
+ADO: 2408587
+---
+
+### Setup
+- [ ] Log in as `BASH_INST_01`
+- [ ] Navigate to "Ultra Course Alpha"
+
+### Execution
+- [ ] Add 10 mixed blocks (Text/Image)
+- [ ] Verify blocks don't overlap
+```
 
 ### 📤 Exporting Results
 - 🗃️ Go to the "Export" tab in the popup.

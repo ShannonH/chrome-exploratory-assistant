@@ -124,6 +124,11 @@ class SidePanelTestingAssistant {
         document.getElementById('toggleCompletedSteps').addEventListener('click', () => this.toggleCompletedSteps());
         document.getElementById('clearSteps').addEventListener('click', () => this.clearSteps());
 
+        // Context header close button
+        document.getElementById('closeContext').addEventListener('click', () => {
+            document.getElementById('contextHeader').style.display = 'none';
+        });
+
         // Add event delegation for step action buttons
         document.getElementById('stepsList').addEventListener('click', (e) => {
             if (e.target.classList.contains('step-pass-btn') || e.target.closest('.step-pass-btn')) {
@@ -416,6 +421,44 @@ class SidePanelTestingAssistant {
         }
     }
 
+    /**
+     * Display metadata in the context header
+     */
+    displayContextHeader(metadata) {
+        if (!metadata || Object.keys(metadata).length === 0) {
+            document.getElementById('contextHeader').style.display = 'none';
+            return;
+        }
+        
+        const contextHeader = document.getElementById('contextHeader');
+        const contextContent = document.getElementById('contextContent');
+        
+        // Clear existing content
+        contextContent.innerHTML = '';
+        
+        // Display metadata items
+        for (const [key, value] of Object.entries(metadata)) {
+            const item = document.createElement('div');
+            item.className = 'context-item';
+            item.innerHTML = `
+                <div class="context-label">${this.escapeHtml(key)}</div>
+                <div class="context-value">${this.escapeHtml(value)}</div>
+            `;
+            contextContent.appendChild(item);
+        }
+        
+        contextHeader.style.display = 'block';
+    }
+
+    /**
+     * Helper function to escape HTML
+     */
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
     saveData() {
         // Properly serialize Date objects to prevent empty object corruption
         const serializedTestSteps = this.testSteps.map(step => ({
@@ -455,6 +498,11 @@ class SidePanelTestingAssistant {
                 this.currentSession = data.currentSession || null;
                 this.testSteps = data.testSteps || [];
                 this.screenshots = data.screenshots || [];
+                
+                // Load and display context metadata if available
+                if (data.contextMetadata) {
+                    this.displayContextHeader(data.contextMetadata);
+                }
                 
                 // Convert timestamps back to Date objects after loading from storage
                 this.testSteps.forEach(step => {

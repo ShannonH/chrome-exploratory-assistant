@@ -7,6 +7,7 @@ class TestingAssistant {
         this.testSteps = [];
         this.screenshots = [];
         this.selectedStepIndex = null; // Track which step is selected for pass/fail actions
+        this.contextMetadata = null; // Store metadata from YAML frontmatter
         // Legacy script tracking removed - now using testSteps directly
         
         this.initializeUI();
@@ -560,8 +561,9 @@ class TestingAssistant {
         // Parse YAML frontmatter and extract metadata
         const { metadata, content } = this.parseYAMLFrontmatter(scriptText);
         
-        // Display metadata in context header if present
+        // Store and display metadata in context header if present
         if (metadata) {
+            this.contextMetadata = metadata;
             this.displayContextHeader(metadata);
         }
         
@@ -599,6 +601,9 @@ class TestingAssistant {
     clearScript() {
         document.getElementById('scriptText').value = '';
         document.getElementById('scriptProgress').style.display = 'none';
+        // Clear context metadata when script is cleared
+        this.contextMetadata = null;
+        document.getElementById('contextHeader').style.display = 'none';
         this.saveData();
     }
 
@@ -1386,6 +1391,7 @@ class TestingAssistant {
             currentSession: this.currentSession,
             testSteps: serializedTestSteps,
             screenshots: serializedScreenshots,
+            contextMetadata: this.contextMetadata, // Save metadata for sync
             // Script data now stored within testSteps with fromScript flag
         };
         
@@ -1421,6 +1427,12 @@ class TestingAssistant {
                 this.currentSession = data.currentSession || null;
                 this.testSteps = data.testSteps || [];
                 this.screenshots = data.screenshots || [];
+                this.contextMetadata = data.contextMetadata || null;
+                
+                // Display context metadata if available
+                if (this.contextMetadata) {
+                    this.displayContextHeader(this.contextMetadata);
+                }
                 
                 // Convert timestamps back to Date objects after loading from storage
                 this.testSteps.forEach(step => {
