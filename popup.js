@@ -997,8 +997,8 @@ Delete these instructions before using the template!
 **Test Data Used:**
 [Username/Password combinations, test data, etc.]
 
-**Priority:** [High/Medium/Low]
 **Severity:** [Critical/Major/Minor]
+**Urgency:** [High/Medium/Low]
 \`;
             
             textarea.value = template;
