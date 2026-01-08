@@ -63,6 +63,11 @@ class TestingAssistant {
         // Help toggle
         document.getElementById('helpToggle').addEventListener('click', () => this.toggleHelp());
 
+        // Context header close button
+        document.getElementById('closeContext').addEventListener('click', () => {
+            document.getElementById('contextHeader').style.display = 'none';
+        });
+
         // Drag and drop for script upload
         const uploadArea = document.getElementById('uploadArea');
         uploadArea.addEventListener('dragover', (e) => {
@@ -447,6 +452,104 @@ class TestingAssistant {
         reader.readAsText(file);
     }
 
+    /**
+     * Parse YAML frontmatter from markdown/YAML content
+     * Extracts metadata between --- delimiters
+     */
+    parseYAMLFrontmatter(content) {
+        const frontmatterRegex = /^---\s*\n([\s\S]*?)\n---\s*\n/;
+        const match = content.match(frontmatterRegex);
+        
+        if (!match) {
+            return { metadata: null, content: content };
+        }
+        
+        const yamlContent = match[1];
+        const remainingContent = content.slice(match[0].length);
+        
+        // Simple YAML parser for key-value pairs
+        const metadata = {};
+        const lines = yamlContent.split('\n');
+        
+        lines.forEach(line => {
+            const colonIndex = line.indexOf(':');
+            if (colonIndex > -1) {
+                const key = line.substring(0, colonIndex).trim();
+                const value = line.substring(colonIndex + 1).trim();
+                if (key && value) {
+                    metadata[key] = value;
+                }
+            }
+        });
+        
+        return { metadata, content: remainingContent };
+    }
+
+    /**
+     * Extract checklist items from markdown content
+     * Looks for lines starting with - [ ] or - [x]
+     */
+    extractChecklistItems(content) {
+        const lines = content.split('\n');
+        const checklistItems = [];
+        
+        for (const line of lines) {
+            const trimmed = line.trim();
+            // Match checkbox patterns: - [ ] or - [x] or - [X]
+            const checkboxMatch = trimmed.match(/^-\s*\[([ xX])\]\s*(.+)/);
+            
+            if (checkboxMatch) {
+                const isChecked = checkboxMatch[1].toLowerCase() === 'x';
+                const text = checkboxMatch[2].trim();
+                
+                checklistItems.push({
+                    text: text,
+                    checked: isChecked
+                });
+            }
+        }
+        
+        return checklistItems;
+    }
+
+    /**
+     * Display metadata in the context header
+     */
+    displayContextHeader(metadata) {
+        if (!metadata || Object.keys(metadata).length === 0) {
+            document.getElementById('contextHeader').style.display = 'none';
+            return;
+        }
+        
+        const contextHeader = document.getElementById('contextHeader');
+        const contextContent = document.getElementById('contextContent');
+        
+        // Clear existing content
+        contextContent.innerHTML = '';
+        
+        // Display metadata items
+        for (const [key, value] of Object.entries(metadata)) {
+            const item = document.createElement('div');
+            item.className = 'context-item';
+            item.innerHTML = `
+                <div class="context-label">${this.escapeHtml(key)}</div>
+                <div class="context-value">${this.escapeHtml(value)}</div>
+            `;
+            contextContent.appendChild(item);
+        }
+        
+        contextHeader.style.display = 'block';
+    }
+
+    /**
+     * Helper function to escape HTML
+     */
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
     async loadScript() {
         const scriptText = document.getElementById('scriptText').value.trim();
         if (!scriptText) {
@@ -454,18 +557,28 @@ class TestingAssistant {
             return;
         }
 
-        // Parse script into test steps and add them to the main test steps
-        const scriptSteps = scriptText.split('\n')
-            .map(line => line.trim())
-            .filter(line => line && !line.startsWith('#'))
-            .map(line => line.replace(/^\d+\.\s*/, '')); // Remove numbering
+        // Parse YAML frontmatter and extract metadata
+        const { metadata, content } = this.parseYAMLFrontmatter(scriptText);
+        
+        // Display metadata in context header if present
+        if (metadata) {
+            this.displayContextHeader(metadata);
+        }
+        
+        // Extract checklist items from content
+        const checklistItems = this.extractChecklistItems(content);
+        
+        if (checklistItems.length === 0) {
+            this.showNotification('No checklist items found. Use - [ ] or - [x] format', 'warning');
+            return;
+        }
 
-        // Add each script step as a test step
-        scriptSteps.forEach(stepText => {
+        // Add each checklist item as a test step
+        checklistItems.forEach(item => {
             const step = {
                 id: Date.now() + Math.random(), // Ensure unique IDs
-                description: stepText,
-                status: 'pending',
+                description: item.text,
+                status: item.checked ? 'pass' : 'pending',
                 screenshots: [],
                 fromScript: true // Mark as script-generated
             };
@@ -480,7 +593,7 @@ class TestingAssistant {
         // Switch to the main test session tab to show the loaded steps
         this.switchTab('test');
         
-        this.showNotification(`Script loaded: ${scriptSteps.length} steps added`, 'success');
+        this.showNotification(`Script loaded: ${checklistItems.length} steps added`, 'success');
     }
 
     clearScript() {
