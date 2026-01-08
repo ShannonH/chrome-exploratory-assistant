@@ -622,14 +622,13 @@ ADO: [Work Item ID]
 - [ ] [First setup step]
 - [ ] [Second setup step]
 
-### Execution
-- [ ] [First test action]
-- [ ] [Second test action]
-- [ ] [Third test action]
+### Test Steps
+- [ ] [Action to perform and what to verify - mark pass/fail based on result]
+- [ ] [Second action and expected outcome]
+- [ ] [Third action and verification criteria]
 
-### Verification
-- [ ] [First verification point]
-- [ ] [Second verification point]
+### Cleanup (Optional)
+- [ ] [Cleanup step if needed]
 
 ---
 ## Template Instructions
@@ -643,16 +642,18 @@ Replace the bracketed placeholders above with your actual test information:
 - Tour: Testing approach (e.g., "Happy Path ✅", "Edge Cases 🔍", "Chaos Tour 🤯")
 - ADO: Azure DevOps or other work item ID
 
-**Checklist Items:**
+**Writing Test Steps:**
+- Each checklist item becomes a card with Pass/Fail buttons
+- Include BOTH the action AND what to verify in each step
+- Example: "Click Submit button and verify confirmation message appears"
+- Mark Pass if the step works as expected, Fail if it doesn't
 - Use \`- [ ]\` for pending/unchecked items
 - Use \`- [x]\` for completed/checked items
-- Only lines with checkboxes become test steps in the extension
 
 **Sections (Optional):**
 You can organize your steps with markdown headers like:
 - ### Setup
-- ### Execution
-- ### Verification
+- ### Test Steps
 - ### Cleanup
 
 Delete these instructions before using the template!

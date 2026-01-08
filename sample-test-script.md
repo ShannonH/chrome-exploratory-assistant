@@ -10,11 +10,10 @@ ADO: 2408587
 - [ ] Log in as `BASH_INST_01`
 - [ ] Navigate to "Ultra Course Alpha"
 
-### Execution
-- [ ] Add 10 mixed blocks (Text/Image)
+### Test Steps
+- [ ] Add 10 mixed blocks (Text/Image) and verify they appear in the editor
 - [ ] Rapidly toggle "Stack Vertically" while dragging an item
 - [ ] Hit 'Save' while the stacking animation is still running
-
-### Verification
-- [ ] Verify blocks don't overlap
+- [ ] Verify blocks don't overlap after save completes
 - [ ] Verify no "Oops" error appears in the toast notification
+
