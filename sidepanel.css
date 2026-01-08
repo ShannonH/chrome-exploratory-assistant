@@ -6,6 +6,7 @@
     --primary-hover: #5b21b6;
     --secondary-color: #64748b;
     --accent-color: #0ea5e9;
+    --accent-hover: #0284c7;
     --success-color: #10b981;
     --danger-color: #f59e0b;
     --warning-color: #f59e0b;
@@ -755,7 +756,7 @@ body {
 }
 
 .btn-screenshot:hover {
-    background: #0284c7;
+    background: var(--accent-hover);
 }
 
 /* Dark mode support */

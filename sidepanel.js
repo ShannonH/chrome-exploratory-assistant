@@ -312,34 +312,62 @@ class SidePanelTestingAssistant {
             const scriptIndicator = step.fromScript ? '📋 ' : '';
             const screenshotIndicator = (step.screenshots && step.screenshots.length > 0) ? ` 📸${step.screenshots.length}` : '';
             
-            // Generate screenshot display HTML if screenshots exist
-            let screenshotsHtml = '';
-            if (step.screenshots && step.screenshots.length > 0) {
-                screenshotsHtml = '<div class="step-screenshots">';
-                step.screenshots.forEach((screenshot, screenshotIndex) => {
-                    screenshotsHtml += `
-                        <div class="screenshot-preview">
-                            <img src="${screenshot.dataUrl}" alt="Screenshot ${screenshotIndex + 1}" class="screenshot-thumbnail">
-                        </div>
-                    `;
-                });
-                screenshotsHtml += '</div>';
+            // Create step header
+            const stepHeader = document.createElement('div');
+            stepHeader.className = 'step-header';
+            stepHeader.innerHTML = `
+                <span class="step-number">${scriptIndicator}Step ${stepNumber}${screenshotIndicator}</span>
+                <span class="step-status ${step.status}">${step.status}</span>
+            `;
+            stepElement.appendChild(stepHeader);
+            
+            // Create step description
+            const stepDescription = document.createElement('div');
+            stepDescription.className = 'step-description';
+            stepDescription.textContent = step.description;
+            stepElement.appendChild(stepDescription);
+            
+            // Create timestamp if exists
+            if (step.markedTimestamp) {
+                const stepTimestamp = document.createElement('div');
+                stepTimestamp.className = 'step-timestamp';
+                stepTimestamp.textContent = this.formatTimestamp(step.markedTimestamp);
+                stepElement.appendChild(stepTimestamp);
             }
             
-            stepElement.innerHTML = `
-                <div class="step-header">
-                    <span class="step-number">${scriptIndicator}Step ${stepNumber}${screenshotIndicator}</span>
-                    <span class="step-status ${step.status}">${step.status}</span>
-                </div>
-                <div class="step-description">${step.description}</div>
-                ${step.markedTimestamp ? `<div class="step-timestamp">${this.formatTimestamp(step.markedTimestamp)}</div>` : ''}
-                ${screenshotsHtml}
-                <div class="step-actions">
-                    <button class="btn btn-mini btn-success step-pass-btn" data-index="${index}" title="Mark this step as Pass">✅ Pass</button>
-                    <button class="btn btn-mini btn-danger step-fail-btn" data-index="${index}" title="Mark this step as Fail">❌ Fail</button>
-                    <button class="btn btn-mini btn-screenshot step-screenshot-btn" data-index="${index}" title="Take Screenshot for this step">📸 Screenshot</button>
-                </div>
+            // Create screenshots container if screenshots exist
+            if (step.screenshots && step.screenshots.length > 0) {
+                const screenshotsContainer = document.createElement('div');
+                screenshotsContainer.className = 'step-screenshots';
+                
+                step.screenshots.forEach((screenshot, screenshotIndex) => {
+                    // Validate dataUrl format to prevent XSS
+                    if (screenshot.dataUrl && screenshot.dataUrl.startsWith('data:image/')) {
+                        const screenshotPreview = document.createElement('div');
+                        screenshotPreview.className = 'screenshot-preview';
+                        
+                        const img = document.createElement('img');
+                        img.src = screenshot.dataUrl;
+                        img.alt = `Screenshot ${screenshotIndex + 1}`;
+                        img.className = 'screenshot-thumbnail';
+                        
+                        screenshotPreview.appendChild(img);
+                        screenshotsContainer.appendChild(screenshotPreview);
+                    }
+                });
+                
+                stepElement.appendChild(screenshotsContainer);
+            }
+            
+            // Create step actions
+            const stepActions = document.createElement('div');
+            stepActions.className = 'step-actions';
+            stepActions.innerHTML = `
+                <button class="btn btn-mini btn-success step-pass-btn" data-index="${index}" title="Mark this step as Pass">✅ Pass</button>
+                <button class="btn btn-mini btn-danger step-fail-btn" data-index="${index}" title="Mark this step as Fail">❌ Fail</button>
+                <button class="btn btn-mini btn-screenshot step-screenshot-btn" data-index="${index}" title="Take Screenshot for this step">📸 Screenshot</button>
             `;
+            stepElement.appendChild(stepActions);
             
             stepsList.appendChild(stepElement);
         });
@@ -738,10 +766,6 @@ class SidePanelTestingAssistant {
             this.saveData();
             
         } catch (error) {
-            console.error('Screenshot error:', error);
-            this.showFallbackActions();
-        }
-    }
             console.error('Screenshot error:', error);
             this.showFallbackActions();
         }

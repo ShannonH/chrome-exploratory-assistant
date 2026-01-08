@@ -83,11 +83,16 @@ class BackgroundService {
 
                 case 'CAPTURE_SCREENSHOT':
                     // New message handler for sidebar screenshot capture
-                    const dataUrl = await chrome.tabs.captureVisibleTab(null, {
-                        format: 'png',
-                        quality: 90
-                    });
-                    sendResponse({ success: true, dataUrl: dataUrl });
+                    try {
+                        const dataUrl = await chrome.tabs.captureVisibleTab(null, {
+                            format: 'png',
+                            quality: 90
+                        });
+                        sendResponse({ success: true, dataUrl: dataUrl });
+                    } catch (captureError) {
+                        console.error('Screenshot capture failed:', captureError);
+                        sendResponse({ success: false, error: captureError.message || 'Failed to capture screenshot' });
+                    }
                     break;
 
                 case 'saveTestStep':
@@ -442,8 +447,8 @@ class BackgroundService {
                     break;
 
                 case 'add-test-step':
-                    // Open popup to add step
-                    chrome.action.openPopup();
+                    // Open sidebar to add step
+                    await this.openSidePanel(tab);
                     break;
 
                 case 'mark-step-pass':
