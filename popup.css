@@ -649,11 +649,11 @@ body {
     justify-content: flex-end;
 }
 
-.pin-instructions {
+.sidebar-instructions {
     color: var(--text-primary);
 }
 
-.pin-instructions h4 {
+.sidebar-instructions h4 {
     margin: 0 0 16px 0;
     color: var(--primary-color);
 }

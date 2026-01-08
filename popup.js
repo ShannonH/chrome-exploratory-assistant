@@ -1297,31 +1297,28 @@ Delete these instructions before using the template!
     showDetachedWindowInstructions() {
         // Create a more helpful instruction modal
         const instructionsHtml = `
-            <div class="pin-instructions">
-                <h4>📌 Keep Extension Accessible</h4>
+            <div class="sidebar-instructions">
+                <h4>📋 Open Extension in Sidebar</h4>
                 <div class="instruction-item">
-                    <strong>1. Pin to Toolbar:</strong> Right-click extension icon → "Pin"
+                    <strong>1. Use "Open in Sidebar" button:</strong> Click the button in the popup to open the sidebar
                 </div>
                 <div class="instruction-item">
                     <strong>2. Keyboard Shortcuts:</strong> 
                     <ul>
-                        <li><kbd>Alt+T</kbd> - Open assistant</li>
+                        <li><kbd>Alt+T</kbd> - Open assistant in sidebar</li>
                         <li><kbd>Alt+S</kbd> - Take screenshot</li>
                         <li><kbd>Alt+P</kbd> - Mark Pass</li>
                         <li><kbd>Alt+F</kbd> - Mark Fail</li>
                     </ul>
                 </div>
                 <div class="instruction-item">
-                    <strong>3. Browser Bookmarks:</strong> Bookmark this popup for quick access
-                </div>
-                <div class="instruction-item">
-                    <strong>4. Context Menu:</strong> Right-click on pages for quick actions
+                    <strong>3. Context Menu:</strong> Right-click on pages for quick actions
                 </div>
             </div>
         `;
         
         // Show modal with instructions
-        this.showModal('Pin Extension', instructionsHtml);
+        this.showModal('Open in Sidebar', instructionsHtml);
     }
 
     showModal(title, content) {
