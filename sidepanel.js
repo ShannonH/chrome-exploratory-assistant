@@ -341,8 +341,12 @@ class SidePanelTestingAssistant {
                 screenshotsContainer.className = 'step-screenshots';
                 
                 step.screenshots.forEach((screenshot, screenshotIndex) => {
-                    // Validate dataUrl format to prevent XSS
-                    if (screenshot.dataUrl && screenshot.dataUrl.startsWith('data:image/')) {
+                    // Validate dataUrl format to prevent XSS - must be a valid data URL with image MIME type
+                    const isValidDataUrl = screenshot.dataUrl && 
+                        typeof screenshot.dataUrl === 'string' &&
+                        /^data:image\/(png|jpeg|jpg|gif|webp);base64,/.test(screenshot.dataUrl);
+                    
+                    if (isValidDataUrl) {
                         const screenshotPreview = document.createElement('div');
                         screenshotPreview.className = 'screenshot-preview';
                         
