@@ -7,6 +7,7 @@ class TestingAssistant {
         this.testSteps = [];
         this.screenshots = [];
         this.selectedStepIndex = null; // Track which step is selected for pass/fail actions
+        this.contextMetadata = null; // Store metadata from YAML frontmatter
         // Legacy script tracking removed - now using testSteps directly
         
         this.initializeUI();
@@ -52,6 +53,7 @@ class TestingAssistant {
         document.getElementById('fileInput').addEventListener('change', (e) => this.handleFileUpload(e));
         document.getElementById('loadScript').addEventListener('click', () => this.loadScript());
         document.getElementById('clearScript').addEventListener('click', () => this.clearScript());
+        document.getElementById('downloadTemplate').addEventListener('click', () => this.downloadTemplate());
 
         // Export tab
         document.getElementById('exportData').addEventListener('click', () => this.exportData());
@@ -62,6 +64,11 @@ class TestingAssistant {
 
         // Help toggle
         document.getElementById('helpToggle').addEventListener('click', () => this.toggleHelp());
+
+        // Context header close button
+        document.getElementById('closeContext').addEventListener('click', () => {
+            document.getElementById('contextHeader').style.display = 'none';
+        });
 
         // Drag and drop for script upload
         const uploadArea = document.getElementById('uploadArea');
@@ -447,6 +454,104 @@ class TestingAssistant {
         reader.readAsText(file);
     }
 
+    /**
+     * Parse YAML frontmatter from markdown/YAML content
+     * Extracts metadata between --- delimiters
+     */
+    parseYAMLFrontmatter(content) {
+        const frontmatterRegex = /^---\s*\n([\s\S]*?)\n---\s*\n/;
+        const match = content.match(frontmatterRegex);
+        
+        if (!match) {
+            return { metadata: null, content: content };
+        }
+        
+        const yamlContent = match[1];
+        const remainingContent = content.slice(match[0].length);
+        
+        // Simple YAML parser for key-value pairs
+        const metadata = {};
+        const lines = yamlContent.split('\n');
+        
+        lines.forEach(line => {
+            const colonIndex = line.indexOf(':');
+            if (colonIndex > -1) {
+                const key = line.substring(0, colonIndex).trim();
+                const value = line.substring(colonIndex + 1).trim();
+                if (key && value) {
+                    metadata[key] = value;
+                }
+            }
+        });
+        
+        return { metadata, content: remainingContent };
+    }
+
+    /**
+     * Extract checklist items from markdown content
+     * Looks for lines starting with - [ ] or - [x]
+     */
+    extractChecklistItems(content) {
+        const lines = content.split('\n');
+        const checklistItems = [];
+        
+        for (const line of lines) {
+            const trimmed = line.trim();
+            // Match checkbox patterns: - [ ] or - [x] or - [X]
+            const checkboxMatch = trimmed.match(/^-\s*\[([ xX])\]\s*(.+)/);
+            
+            if (checkboxMatch) {
+                const isChecked = checkboxMatch[1].toLowerCase() === 'x';
+                const text = checkboxMatch[2].trim();
+                
+                checklistItems.push({
+                    text: text,
+                    checked: isChecked
+                });
+            }
+        }
+        
+        return checklistItems;
+    }
+
+    /**
+     * Display metadata in the context header
+     */
+    displayContextHeader(metadata) {
+        if (!metadata || Object.keys(metadata).length === 0) {
+            document.getElementById('contextHeader').style.display = 'none';
+            return;
+        }
+        
+        const contextHeader = document.getElementById('contextHeader');
+        const contextContent = document.getElementById('contextContent');
+        
+        // Clear existing content
+        contextContent.innerHTML = '';
+        
+        // Display metadata items
+        for (const [key, value] of Object.entries(metadata)) {
+            const item = document.createElement('div');
+            item.className = 'context-item';
+            item.innerHTML = `
+                <div class="context-label">${this.escapeHtml(key)}</div>
+                <div class="context-value">${this.escapeHtml(value)}</div>
+            `;
+            contextContent.appendChild(item);
+        }
+        
+        contextHeader.style.display = 'block';
+    }
+
+    /**
+     * Helper function to escape HTML
+     */
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
     async loadScript() {
         const scriptText = document.getElementById('scriptText').value.trim();
         if (!scriptText) {
@@ -454,18 +559,29 @@ class TestingAssistant {
             return;
         }
 
-        // Parse script into test steps and add them to the main test steps
-        const scriptSteps = scriptText.split('\n')
-            .map(line => line.trim())
-            .filter(line => line && !line.startsWith('#'))
-            .map(line => line.replace(/^\d+\.\s*/, '')); // Remove numbering
+        // Parse YAML frontmatter and extract metadata
+        const { metadata, content } = this.parseYAMLFrontmatter(scriptText);
+        
+        // Store and display metadata in context header if present
+        if (metadata) {
+            this.contextMetadata = metadata;
+            this.displayContextHeader(metadata);
+        }
+        
+        // Extract checklist items from content
+        const checklistItems = this.extractChecklistItems(content);
+        
+        if (checklistItems.length === 0) {
+            this.showNotification('No checklist items found. Use - [ ] or - [x] format', 'warning');
+            return;
+        }
 
-        // Add each script step as a test step
-        scriptSteps.forEach(stepText => {
+        // Add each checklist item as a test step
+        checklistItems.forEach(item => {
             const step = {
                 id: Date.now() + Math.random(), // Ensure unique IDs
-                description: stepText,
-                status: 'pending',
+                description: item.text,
+                status: item.checked ? 'pass' : 'pending',
                 screenshots: [],
                 fromScript: true // Mark as script-generated
             };
@@ -480,13 +596,76 @@ class TestingAssistant {
         // Switch to the main test session tab to show the loaded steps
         this.switchTab('test');
         
-        this.showNotification(`Script loaded: ${scriptSteps.length} steps added`, 'success');
+        this.showNotification(`Script loaded: ${checklistItems.length} steps added`, 'success');
     }
 
     clearScript() {
         document.getElementById('scriptText').value = '';
         document.getElementById('scriptProgress').style.display = 'none';
+        // Clear context metadata when script is cleared
+        this.contextMetadata = null;
+        document.getElementById('contextHeader').style.display = 'none';
         this.saveData();
+    }
+
+    downloadTemplate() {
+        // Create a template file with example YAML frontmatter and checklist items
+        const template = `---
+Mission: [Your Test Mission Name]
+Charter: [Charter Number - Description]
+Persona: [Tester Persona with emoji]
+Tour: [Tour Type with emoji]
+ADO: [Work Item ID]
+---
+
+### Setup
+- [ ] [First setup step]
+- [ ] [Second setup step]
+
+### Test Steps
+- [ ] [Action to perform and what to verify - mark pass/fail based on result]
+- [ ] [Second action and expected outcome]
+- [ ] [Third action and verification criteria]
+
+### Cleanup (Optional)
+- [ ] [Cleanup step if needed]
+
+---
+## Template Instructions
+
+Replace the bracketed placeholders above with your actual test information:
+
+**YAML Frontmatter Fields:**
+- Mission: Brief name describing what you're testing
+- Charter: Charter number and description
+- Persona: The role/mindset you're testing as (e.g., "New User 👤", "Power User ⚡")
+- Tour: Testing approach (e.g., "Happy Path ✅", "Edge Cases 🔍", "Chaos Tour 🤯")
+- ADO: Azure DevOps or other work item ID
+
+**Writing Test Steps:**
+- Each checklist item becomes a card with Pass/Fail buttons
+- Include BOTH the action AND what to verify in each step
+- Example: "Click Submit button and verify confirmation message appears"
+- Mark Pass if the step works as expected, Fail if it doesn't
+- Use \`- [ ]\` for pending/unchecked items
+- Use \`- [x]\` for completed/checked items
+
+**Sections (Optional):**
+You can organize your steps with markdown headers like:
+- ### Setup
+- ### Test Steps
+- ### Cleanup
+
+Delete these instructions before using the template!
+---
+`;
+
+        // Create blob and download
+        const blob = new Blob([template], { type: 'text/markdown' });
+        const timestamp = new Date().toISOString().split('T')[0];
+        this.downloadBlob(blob, `test-template-${timestamp}.md`);
+        
+        this.showNotification('Template downloaded successfully!', 'success');
     }
 
     exportData() {
@@ -818,8 +997,8 @@ class TestingAssistant {
 **Test Data Used:**
 [Username/Password combinations, test data, etc.]
 
-**Priority:** [High/Medium/Low]
 **Severity:** [Critical/Major/Minor]
+**Urgency:** [High/Medium/Low]
 \`;
             
             textarea.value = template;
@@ -1273,6 +1452,7 @@ class TestingAssistant {
             currentSession: this.currentSession,
             testSteps: serializedTestSteps,
             screenshots: serializedScreenshots,
+            contextMetadata: this.contextMetadata, // Save metadata for sync
             // Script data now stored within testSteps with fromScript flag
         };
         
@@ -1308,6 +1488,12 @@ class TestingAssistant {
                 this.currentSession = data.currentSession || null;
                 this.testSteps = data.testSteps || [];
                 this.screenshots = data.screenshots || [];
+                this.contextMetadata = data.contextMetadata || null;
+                
+                // Display context metadata if available
+                if (this.contextMetadata) {
+                    this.displayContextHeader(this.contextMetadata);
+                }
                 
                 // Convert timestamps back to Date objects after loading from storage
                 this.testSteps.forEach(step => {

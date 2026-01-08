@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Popup - Markdown/YAML Format</title>
+    <link rel="stylesheet" href="popup.css">
+    <style>
+        body {
+            padding: 20px;
+        }
+        .test-controls {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: #f0f0f0;
+            padding: 10px;
+            border: 2px solid #333;
+            border-radius: 8px;
+        }
+        .test-controls button {
+            display: block;
+            margin: 5px 0;
+            padding: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-controls">
+        <h4>Test Controls</h4>
+        <button onclick="loadSampleScript()">Load Sample Script</button>
+        <button onclick="clearScript()">Clear Script</button>
+    </div>
+
+    <div class="container">
+        <header class="header">
+            <div class="logo">
+                <h1>Testing Assistant</h1>
+            </div>
+        </header>
+
+        <div class="tabs">
+            <button class="tab-button active" data-tab="test">Test Session</button>
+            <button class="tab-button" data-tab="script">Test Script</button>
+        </div>
+
+        <div class="tab-content" id="testTab">
+            <!-- Context Header for Test Metadata (YAML Frontmatter) -->
+            <div class="context-header" id="contextHeader" style="display: none;">
+                <div class="context-content" id="contextContent">
+                    <!-- Metadata will be populated here by JavaScript -->
+                </div>
+                <button class="context-close" id="closeContext" title="Hide context header">×</button>
+            </div>
+
+            <div class="test-info" id="testInfo" style="display: block;">
+                <div class="info-card">
+                    <div class="info-row">
+                        <span class="label">Session Time:</span>
+                        <span id="sessionTime">00:00:00</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">Steps:</span>
+                        <span id="stepCount">0</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">Screenshots:</span>
+                        <span id="screenshotCount">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="recent-steps" id="recentSteps">
+                <div class="steps-header">
+                    <h3>Test Steps</h3>
+                </div>
+                <div class="steps-list" id="stepsList"></div>
+            </div>
+        </div>
+
+        <div class="tab-content" id="scriptTab" style="display: none;">
+            <div class="script-section">
+                <h3>Test Script</h3>
+                <p class="section-description">Paste a test script in Markdown/YAML format</p>
+
+                <div class="script-textarea">
+                    <textarea id="scriptText" placeholder="Paste your test script here with YAML frontmatter..."></textarea>
+                </div>
+
+                <div class="script-actions">
+                    <button id="loadScript" class="btn btn-primary">Load Script</button>
+                    <button id="clearScript" class="btn btn-secondary">Clear</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Mock chrome storage for testing
+        if (typeof chrome === 'undefined') {
+            window.chrome = {
+                storage: {
+                    local: {
+                        get: (key, callback) => {
+                            if (callback) callback({});
+                            return Promise.resolve({});
+                        },
+                        set: (data, callback) => {
+                            console.log('Mock storage set:', data);
+                            if (callback) callback();
+                            return Promise.resolve();
+                        },
+                        remove: (key, callback) => {
+                            if (callback) callback();
+                            return Promise.resolve();
+                        }
+                    },
+                    onChanged: {
+                        addListener: () => {}
+                    }
+                },
+                runtime: {
+                    getManifest: () => ({ version: '1.0' })
+                }
+            };
+        }
+
+        // Load sample script function
+        function loadSampleScript() {
+            const sampleScript = `---
+Mission: The Block Stacker
+Charter: 1 - Content Designer Siege
+Persona: Overwhelmed Instructor 🧑‍🏫
+Tour: Chaos Tour 🤯
+ADO: 2408587
+---
+
+### Setup
+- [ ] Log in as \`BASH_INST_01\`
+- [ ] Navigate to "Ultra Course Alpha"
+
+### Execution
+- [ ] Add 10 mixed blocks (Text/Image)
+- [ ] Rapidly toggle "Stack Vertically" while dragging an item
+- [ ] Hit 'Save' while the stacking animation is still running
+
+### Verification
+- [ ] Verify blocks don't overlap
+- [ ] Verify no "Oops" error appears in the toast notification`;
+
+            document.getElementById('scriptText').value = sampleScript;
+            
+            // Switch to script tab
+            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+            document.querySelector('[data-tab="script"]').classList.add('active');
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.style.display = 'none';
+            });
+            document.getElementById('scriptTab').style.display = 'block';
+        }
+
+        function clearScript() {
+            document.getElementById('scriptText').value = '';
+            document.getElementById('contextHeader').style.display = 'none';
+        }
+    </script>
+    <script src="popup.js"></script>
+</body>
+</html>

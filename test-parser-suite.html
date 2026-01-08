@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Markdown/YAML Format Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 2px solid #333;
+            border-radius: 8px;
+        }
+        .test-section h2 {
+            margin-top: 0;
+        }
+        pre {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        .pass { color: green; font-weight: bold; }
+        .fail { color: red; font-weight: bold; }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+            border: none;
+            border-radius: 4px;
+            background: #007cba;
+            color: white;
+            font-size: 14px;
+        }
+        button:hover {
+            background: #005a87;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Markdown/YAML Format Test Suite</h1>
+    
+    <div class="test-section">
+        <h2>Test 1: YAML Frontmatter Parsing</h2>
+        <p>Tests that YAML frontmatter between --- delimiters is correctly parsed</p>
+        <pre id="test1-input">---
+Mission: The Block Stacker
+Charter: 1 - Content Designer Siege
+Persona: Overwhelmed Instructor 🧑‍🏫
+Tour: Chaos Tour 🤯
+ADO: 2408587
+---
+
+### Setup
+- [ ] Log in as `BASH_INST_01`</pre>
+        <button onclick="runTest1()">Run Test 1</button>
+        <div id="test1-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 2: Checklist Extraction</h2>
+        <p>Tests extraction of checkbox items from markdown content</p>
+        <pre id="test2-input">### Test Steps
+- [ ] Step 1: Unchecked
+- [x] Step 2: Checked
+- [ ] Step 3: Another unchecked
+- [X] Step 4: Checked with capital X</pre>
+        <button onclick="runTest2()">Run Test 2</button>
+        <div id="test2-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 3: No Frontmatter (Legacy Support)</h2>
+        <p>Tests that content without frontmatter still works</p>
+        <pre id="test3-input">- [ ] First step without frontmatter
+- [ ] Second step
+- [ ] Third step</pre>
+        <button onclick="runTest3()">Run Test 3</button>
+        <div id="test3-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 4: Complex Checklist Items</h2>
+        <p>Tests checklist items with special characters and formatting</p>
+        <pre id="test4-input">- [ ] Navigate to "Special Page" with 'quotes'
+- [ ] Click the \`Submit\` button
+- [ ] Verify email@example.com is valid
+- [ ] Test with 100% accuracy</pre>
+        <button onclick="runTest4()">Run Test 4</button>
+        <div id="test4-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 5: Full Example from Requirements</h2>
+        <p>Tests the exact example from the problem statement</p>
+        <pre id="test5-input">---
+Mission: The Block Stacker
+Charter: 1 - Content Designer Siege
+Persona: Overwhelmed Instructor 🧑‍🏫
+Tour: Chaos Tour 🤯
+ADO: 2408587
+---
+
+### Setup
+- [ ] Log in as `BASH_INST_01`
+- [ ] Navigate to "Ultra Course Alpha"
+
+### Execution
+- [ ] Add 10 mixed blocks (Text/Image)
+- [ ] Rapidly toggle "Stack Vertically" while dragging an item
+- [ ] Hit 'Save' while the stacking animation is still running
+
+### Verification
+- [ ] Verify blocks don't overlap
+- [ ] Verify no "Oops" error appears in the toast notification</pre>
+        <button onclick="runTest5()">Run Test 5</button>
+        <div id="test5-result"></div>
+    </div>
+
+    <script>
+        // Parser functions (same as in popup.js)
+        function parseYAMLFrontmatter(content) {
+            const frontmatterRegex = /^---\s*\n([\s\S]*?)\n---\s*\n/;
+            const match = content.match(frontmatterRegex);
+            
+            if (!match) {
+                return { metadata: null, content: content };
+            }
+            
+            const yamlContent = match[1];
+            const remainingContent = content.slice(match[0].length);
+            
+            const metadata = {};
+            const lines = yamlContent.split('\n');
+            
+            lines.forEach(line => {
+                const colonIndex = line.indexOf(':');
+                if (colonIndex > -1) {
+                    const key = line.substring(0, colonIndex).trim();
+                    const value = line.substring(colonIndex + 1).trim();
+                    if (key && value) {
+                        metadata[key] = value;
+                    }
+                }
+            });
+            
+            return { metadata, content: remainingContent };
+        }
+
+        function extractChecklistItems(content) {
+            const lines = content.split('\n');
+            const checklistItems = [];
+            
+            for (const line of lines) {
+                const trimmed = line.trim();
+                const checkboxMatch = trimmed.match(/^-\s*\[([ xX])\]\s*(.+)/);
+                
+                if (checkboxMatch) {
+                    const isChecked = checkboxMatch[1].toLowerCase() === 'x';
+                    const text = checkboxMatch[2].trim();
+                    
+                    checklistItems.push({
+                        text: text,
+                        checked: isChecked
+                    });
+                }
+            }
+            
+            return checklistItems;
+        }
+
+        function runTest1() {
+            const input = document.getElementById('test1-input').textContent;
+            const { metadata, content } = parseYAMLFrontmatter(input);
+            
+            const result = document.getElementById('test1-result');
+            let html = '<h3>Results:</h3>';
+            
+            const passed = metadata && 
+                          metadata.Mission === 'The Block Stacker' &&
+                          metadata.Persona === 'Overwhelmed Instructor 🧑‍🏫' &&
+                          metadata.ADO === '2408587';
+            
+            html += `<p class="${passed ? 'pass' : 'fail'}">${passed ? 'PASS' : 'FAIL'}</p>`;
+            html += '<p><strong>Metadata:</strong></p>';
+            html += '<pre>' + JSON.stringify(metadata, null, 2) + '</pre>';
+            html += '<p><strong>Remaining Content Length:</strong> ' + content.length + '</p>';
+            
+            result.innerHTML = html;
+        }
+
+        function runTest2() {
+            const input = document.getElementById('test2-input').textContent;
+            const items = extractChecklistItems(input);
+            
+            const result = document.getElementById('test2-result');
+            let html = '<h3>Results:</h3>';
+            
+            const passed = items.length === 4 && 
+                          !items[0].checked && 
+                          items[1].checked &&
+                          !items[2].checked &&
+                          items[3].checked;
+            
+            html += `<p class="${passed ? 'pass' : 'fail'}">${passed ? 'PASS' : 'FAIL'}</p>`;
+            html += '<p><strong>Extracted Items:</strong></p>';
+            html += '<pre>' + JSON.stringify(items, null, 2) + '</pre>';
+            
+            result.innerHTML = html;
+        }
+
+        function runTest3() {
+            const input = document.getElementById('test3-input').textContent;
+            const { metadata, content } = parseYAMLFrontmatter(input);
+            const items = extractChecklistItems(content);
+            
+            const result = document.getElementById('test3-result');
+            let html = '<h3>Results:</h3>';
+            
+            const passed = metadata === null && items.length === 3;
+            
+            html += `<p class="${passed ? 'pass' : 'fail'}">${passed ? 'PASS' : 'FAIL'}</p>`;
+            html += '<p><strong>No Metadata:</strong> ' + (metadata === null ? 'YES' : 'NO') + '</p>';
+            html += '<p><strong>Items Found:</strong> ' + items.length + '</p>';
+            html += '<pre>' + JSON.stringify(items, null, 2) + '</pre>';
+            
+            result.innerHTML = html;
+        }
+
+        function runTest4() {
+            const input = document.getElementById('test4-input').textContent;
+            const items = extractChecklistItems(input);
+            
+            const result = document.getElementById('test4-result');
+            let html = '<h3>Results:</h3>';
+            
+            const passed = items.length === 4 &&
+                          items[0].text.includes('"Special Page"') &&
+                          items[1].text.includes('`Submit`') &&
+                          items[2].text.includes('@') &&
+                          items[3].text.includes('100%');
+            
+            html += `<p class="${passed ? 'pass' : 'fail'}">${passed ? 'PASS' : 'FAIL'}</p>`;
+            html += '<p><strong>Special Characters Preserved:</strong></p>';
+            html += '<pre>' + JSON.stringify(items, null, 2) + '</pre>';
+            
+            result.innerHTML = html;
+        }
+
+        function runTest5() {
+            const input = document.getElementById('test5-input').textContent;
+            const { metadata, content } = parseYAMLFrontmatter(input);
+            const items = extractChecklistItems(content);
+            
+            const result = document.getElementById('test5-result');
+            let html = '<h3>Results:</h3>';
+            
+            const metadataValid = metadata && Object.keys(metadata).length === 5;
+            const itemsValid = items.length === 7;
+            const passed = metadataValid && itemsValid;
+            
+            html += `<p class="${passed ? 'pass' : 'fail'}">${passed ? 'PASS' : 'FAIL'}</p>`;
+            html += '<p><strong>Metadata Fields:</strong> ' + (metadata ? Object.keys(metadata).length : 0) + '/5</p>';
+            html += '<pre>' + JSON.stringify(metadata, null, 2) + '</pre>';
+            html += '<p><strong>Checklist Items:</strong> ' + items.length + '/7</p>';
+            html += '<pre>' + JSON.stringify(items, null, 2) + '</pre>';
+            
+            result.innerHTML = html;
+        }
+
+        // Auto-run all tests on load
+        window.addEventListener('load', () => {
+            console.log('Running all tests...');
+            runTest1();
+            runTest2();
+            runTest3();
+            runTest4();
+            runTest5();
+        });
+    </script>
+</body>
+</html>

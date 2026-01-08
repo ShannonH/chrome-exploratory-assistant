@@ -1,0 +1,16 @@
+---
+Mission: Database Migration Test
+Charter: 2 - Data Integrity Validation
+Persona: Meticulous DBA 💾
+Tour: Edge Case Tour 🔍
+ADO: 2408588
+---
+
+- [ ] Backup production database
+- [ ] Run migration script on staging
+- [ ] Verify all tables created successfully
+- [ ] Check foreign key constraints
+- [ ] Validate data types match schema
+- [ ] Test rollback procedure
+- [ ] Compare record counts pre/post migration
+- [ ] Run integrity checks on migrated data

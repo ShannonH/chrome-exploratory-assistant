@@ -661,6 +661,69 @@ body {
     background: var(--text-muted);
 }
 
+/* Context Header for Test Metadata */
+.context-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 16px;
+    margin: 0 -20px 16px -20px;
+    border-radius: 0;
+    box-shadow: var(--shadow-md);
+    position: relative;
+    z-index: 100;
+}
+
+.context-content {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+    font-size: 13px;
+}
+
+.context-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.context-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    opacity: 0.9;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+.context-value {
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.3;
+}
+
+.context-close {
+    position: absolute;
+    top: 8px;
+    right: 12px;
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: none;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 20px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition);
+}
+
+.context-close:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: scale(1.1);
+}
+
 /* Dark mode support */
 @media (prefers-color-scheme: dark) {
     :root {

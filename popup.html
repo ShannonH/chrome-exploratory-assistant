@@ -33,6 +33,13 @@
         </div>
 
         <div class="tab-content" id="testTab">
+            <!-- Context Header for Test Metadata (YAML Frontmatter) -->
+            <div class="context-header" id="contextHeader" style="display: none;">
+                <div class="context-content" id="contextContent">
+                    <!-- Metadata will be populated here by JavaScript -->
+                </div>
+                <button class="context-close" id="closeContext" title="Hide context header">×</button>
+            </div>
 
             <div class="test-info" id="testInfo" style="display: block;">
                 <div class="info-card">
@@ -100,8 +107,8 @@
 
                 <div class="upload-area" id="uploadArea">
                     <div class="upload-icon">📄</div>
-                    <p>Drag & drop a text file or click to browse</p>
-                    <input type="file" id="fileInput" accept=".txt,.md" hidden>
+                    <p>Drag & drop a Markdown (.md) or YAML (.yaml) file or click to browse</p>
+                    <input type="file" id="fileInput" accept=".md,.yaml,.yml" hidden>
                 </div>
 
                 <div class="script-textarea">
@@ -111,22 +118,29 @@
                             Expand
                         </button>
                     </div>
-                    <textarea id="scriptText" placeholder="Or paste your test script here...
+                    <textarea id="scriptText" placeholder="Paste your test script here in Markdown/YAML format...
 
-Example:
-1. Navigate to login page
-2. Enter valid credentials
-3. Click login button
-4. Verify successful login
-5. Navigate to user profile
-6. Update profile information
-7. Save changes
-8. Verify updates are saved"></textarea>
+Example with YAML frontmatter:
+---
+Mission: User Login Test
+Persona: New User 👤
+Tour: Happy Path ✅
+---
+
+### Test Steps
+- [ ] Navigate to login page
+- [ ] Enter valid credentials
+- [ ] Click login button
+- [ ] Verify successful login"></textarea>
                 </div>
 
                 <div class="script-actions">
                     <button id="loadScript" class="btn btn-primary">Load Script</button>
                     <button id="clearScript" class="btn btn-secondary">Clear</button>
+                    <button id="downloadTemplate" class="btn btn-outline" title="Download a sample template file">
+                        <span class="btn-icon">⬇️</span>
+                        Download Template
+                    </button>
                 </div>
 
                 <div class="script-progress" id="scriptProgress" style="display: none;">
