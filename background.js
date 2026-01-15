@@ -27,11 +27,6 @@ class BackgroundService {
             }
         });
 
-        // Handle extension icon click
-        chrome.action.onClicked.addListener((tab) => {
-            this.openPopup();
-        });
-
         // Context menu for quick actions
         this.setupContextMenus();
 
@@ -79,6 +74,23 @@ class BackgroundService {
                 case 'captureScreenshot':
                     const screenshot = await this.captureScreenshot(sender.tab);
                     sendResponse({ success: true, data: screenshot });
+                    break;
+
+                case 'CAPTURE_SCREENSHOT':
+                    // New message handler for sidebar screenshot capture
+                    try {
+                        const windowId = message.windowId || null;
+                        console.log('CAPTURE_SCREENSHOT request received, windowId:', windowId);
+                        const dataUrl = await chrome.tabs.captureVisibleTab(windowId, {
+                            format: 'png',
+                            quality: 90
+                        });
+                        console.log('Screenshot captured successfully, dataUrl length:', dataUrl?.length);
+                        sendResponse({ success: true, dataUrl: dataUrl });
+                    } catch (captureError) {
+                        console.error('Screenshot capture failed:', captureError);
+                        sendResponse({ success: false, error: captureError.message || 'Failed to capture screenshot' });
+                    }
                     break;
 
                 case 'saveTestStep':
@@ -433,8 +445,8 @@ class BackgroundService {
                     break;
 
                 case 'add-test-step':
-                    // Open popup to add step
-                    chrome.action.openPopup();
+                    // Open sidebar to add step
+                    await this.openSidePanel(tab);
                     break;
 
                 case 'mark-step-pass':

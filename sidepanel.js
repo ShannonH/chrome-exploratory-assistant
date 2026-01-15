@@ -137,6 +137,9 @@ class SidePanelTestingAssistant {
             } else if (e.target.classList.contains('step-fail-btn') || e.target.closest('.step-fail-btn')) {
                 const stepIndex = parseInt(e.target.dataset.index || e.target.closest('.step-fail-btn').dataset.index);
                 this.markStep(stepIndex, 'fail');
+            } else if (e.target.classList.contains('step-screenshot-btn') || e.target.closest('.step-screenshot-btn')) {
+                const stepIndex = parseInt(e.target.dataset.index || e.target.closest('.step-screenshot-btn').dataset.index);
+                this.takeScreenshotForStep(stepIndex);
             }
         });
     }
@@ -309,30 +312,82 @@ class SidePanelTestingAssistant {
             const scriptIndicator = step.fromScript ? '📋 ' : '';
             const screenshotIndicator = (step.screenshots && step.screenshots.length > 0) ? ` 📸${step.screenshots.length}` : '';
             
-            stepElement.innerHTML = `
-                <div class="step-header">
-                    <span class="step-number">${scriptIndicator}Step ${stepNumber}${screenshotIndicator}</span>
-                    <span class="step-status ${step.status}">${step.status}</span>
-                </div>
-                <div class="step-description">${step.description}</div>
-                ${step.markedTimestamp ? `<div class="step-timestamp">${this.formatTimestamp(step.markedTimestamp)}</div>` : ''}
-                <div class="step-actions">
-                    <button class="btn btn-mini btn-success step-pass-btn" data-index="${index}" title="Mark this step as Pass">✅ Pass</button>
-                    <button class="btn btn-mini btn-danger step-fail-btn" data-index="${index}" title="Mark this step as Fail">❌ Fail</button>
-                </div>
+            // Create step header
+            const stepHeader = document.createElement('div');
+            stepHeader.className = 'step-header';
+            stepHeader.innerHTML = `
+                <span class="step-number">${scriptIndicator}Step ${stepNumber}${screenshotIndicator}</span>
+                <span class="step-status ${step.status}">${step.status}</span>
             `;
+            stepElement.appendChild(stepHeader);
+            
+            // Create step description
+            const stepDescription = document.createElement('div');
+            stepDescription.className = 'step-description';
+            stepDescription.textContent = step.description;
+            stepElement.appendChild(stepDescription);
+            
+            // Create timestamp if exists
+            if (step.markedTimestamp) {
+                const stepTimestamp = document.createElement('div');
+                stepTimestamp.className = 'step-timestamp';
+                stepTimestamp.textContent = this.formatTimestamp(step.markedTimestamp);
+                stepElement.appendChild(stepTimestamp);
+            }
+            
+            // Create screenshots container if screenshots exist
+            if (step.screenshots && step.screenshots.length > 0) {
+                const screenshotsContainer = document.createElement('div');
+                screenshotsContainer.className = 'step-screenshots';
+                
+                step.screenshots.forEach((screenshot, screenshotIndex) => {
+                    // Validate dataUrl format to prevent XSS - must be a valid data URL with image MIME type
+                    const isValidDataUrl = screenshot.dataUrl && 
+                        typeof screenshot.dataUrl === 'string' &&
+                        /^data:image\/(png|jpeg|jpg|gif|webp);base64,/.test(screenshot.dataUrl);
+                    
+                    if (isValidDataUrl) {
+                        const screenshotPreview = document.createElement('div');
+                        screenshotPreview.className = 'screenshot-preview';
+                        
+                        const img = document.createElement('img');
+                        img.src = screenshot.dataUrl;
+                        img.alt = `Screenshot ${screenshotIndex + 1}`;
+                        img.className = 'screenshot-thumbnail';
+                        
+                        screenshotPreview.appendChild(img);
+                        screenshotsContainer.appendChild(screenshotPreview);
+                    }
+                });
+                
+                stepElement.appendChild(screenshotsContainer);
+            }
+            
+            // Create step actions
+            const stepActions = document.createElement('div');
+            stepActions.className = 'step-actions';
+            stepActions.innerHTML = `
+                <button class="btn btn-mini btn-success step-pass-btn" data-index="${index}" title="Mark this step as Pass">✅ Pass</button>
+                <button class="btn btn-mini btn-danger step-fail-btn" data-index="${index}" title="Mark this step as Fail">❌ Fail</button>
+                <button class="btn btn-mini btn-screenshot step-screenshot-btn" data-index="${index}" title="Take Screenshot for this step">📸 Screenshot</button>
+            `;
+            stepElement.appendChild(stepActions);
             
             stepsList.appendChild(stepElement);
         });
     }
 
-    async injectContentScript() {
+    async injectContentScript(tabId) {
         try {
-            const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+            if (!tabId) {
+                console.error('No tabId provided to injectContentScript');
+                return;
+            }
             await chrome.scripting.executeScript({
-                target: { tabId: tab.id },
+                target: { tabId: tabId },
                 files: ['content.js']
             });
+            console.log('Content script injected successfully for tab:', tabId);
         } catch (error) {
             console.error('Failed to inject content script:', error);
         }
@@ -607,13 +662,32 @@ class SidePanelTestingAssistant {
                 return;
             }
 
-            const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-            if (tabs.length === 0) {
-                this.showNotification('No active tab found for screenshot', 'error');
+            // Get all normal browser windows and find the one with an active tab
+            const windows = await chrome.windows.getAll({ populate: true, windowTypes: ['normal'] });
+            
+            if (!windows || windows.length === 0) {
+                this.showNotification('No browser window found for screenshot', 'error');
+                console.error('No windows found');
                 return;
             }
             
-            const tab = tabs[0];
+            // Find the last focused window by looking at lastFocused property
+            const lastFocusedWindow = windows.find(w => w.focused) || windows[0];
+            
+            if (!lastFocusedWindow) {
+                this.showNotification('No browser window found for screenshot', 'error');
+                console.error('No lastFocusedWindow found');
+                return;
+            }
+            
+            const tab = lastFocusedWindow.tabs.find(t => t.active);
+            if (!tab) {
+                this.showNotification('No active tab found for screenshot', 'error');
+                console.error('No active tab in window:', lastFocusedWindow.id);
+                return;
+            }
+            
+            console.log('Taking screenshot from window:', lastFocusedWindow.id, 'tab:', tab.id);
             
             // Send message to content script to prepare for screenshot
             try {
@@ -621,22 +695,36 @@ class SidePanelTestingAssistant {
             } catch (error) {
                 // Content script might not be injected yet, try to inject it
                 try {
-                    await this.injectContentScript();
+                    await this.injectContentScript(tab.id);
                 } catch (injectError) {
                     console.log('Content script injection failed:', injectError);
                 }
             }
             
-            // Capture screenshot
-            const dataUrl = await chrome.tabs.captureVisibleTab(null, { format: 'png' });
+            // Capture screenshot using background script message, pass window ID
+            console.log('Sending CAPTURE_SCREENSHOT message with windowId:', lastFocusedWindow.id);
+            const response = await chrome.runtime.sendMessage({ 
+                action: 'CAPTURE_SCREENSHOT',
+                windowId: lastFocusedWindow.id
+            });
+            
+            console.log('CAPTURE_SCREENSHOT response:', response);
+            
+            if (!response || !response.success) {
+                const errorMsg = response?.error || 'No response from background script';
+                console.error('Screenshot capture failed:', errorMsg);
+                throw new Error(errorMsg);
+            }
             
             const screenshot = {
                 id: Date.now(),
                 timestamp: new Date(),
-                dataUrl: dataUrl,
+                dataUrl: response.dataUrl,
                 url: tab.url,
                 title: tab.title
             };
+
+            console.log('Screenshot captured, dataUrl length:', response.dataUrl?.length);
 
             this.screenshots.push(screenshot);
             
@@ -645,6 +733,7 @@ class SidePanelTestingAssistant {
             
             // Show success feedback
             this.showNotification('Screenshot captured successfully!', 'success');
+            console.log('Screenshot saved successfully');
             
         } catch (error) {
             console.error('Screenshot error:', error);
@@ -662,13 +751,32 @@ class SidePanelTestingAssistant {
                 return;
             }
 
-            const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-            if (tabs.length === 0) {
-                this.showNotification('No active tab found for screenshot', 'error');
+            // Get all normal browser windows and find the one with an active tab
+            const windows = await chrome.windows.getAll({ populate: true, windowTypes: ['normal'] });
+            
+            if (!windows || windows.length === 0) {
+                this.showNotification('No browser window found for screenshot', 'error');
+                console.error('No windows found');
                 return;
             }
             
-            const tab = tabs[0];
+            // Find the last focused window by looking at lastFocused property
+            const lastFocusedWindow = windows.find(w => w.focused) || windows[0];
+            
+            if (!lastFocusedWindow) {
+                this.showNotification('No browser window found for screenshot', 'error');
+                console.error('No lastFocusedWindow found');
+                return;
+            }
+            
+            const tab = lastFocusedWindow.tabs.find(t => t.active);
+            if (!tab) {
+                this.showNotification('No active tab found for screenshot', 'error');
+                console.error('No active tab in window:', lastFocusedWindow.id);
+                return;
+            }
+            
+            console.log('Taking screenshot from window:', lastFocusedWindow.id, 'tab:', tab.id);
             
             // Send message to content script to prepare for screenshot
             try {
@@ -676,22 +784,36 @@ class SidePanelTestingAssistant {
             } catch (error) {
                 // Content script might not be injected yet, try to inject it
                 try {
-                    await this.injectContentScript();
+                    await this.injectContentScript(tab.id);
                 } catch (injectError) {
                     console.log('Content script injection failed:', injectError);
                 }
             }
             
-            // Capture screenshot
-            const dataUrl = await chrome.tabs.captureVisibleTab(null, { format: 'png' });
+            // Capture screenshot using background script message, pass window ID
+            console.log('Sending CAPTURE_SCREENSHOT message with windowId:', lastFocusedWindow.id);
+            const response = await chrome.runtime.sendMessage({ 
+                action: 'CAPTURE_SCREENSHOT',
+                windowId: lastFocusedWindow.id
+            });
+            
+            console.log('CAPTURE_SCREENSHOT response:', response);
+            
+            if (!response || !response.success) {
+                const errorMsg = response?.error || 'No response from background script';
+                console.error('Screenshot capture failed:', errorMsg);
+                throw new Error(errorMsg);
+            }
             
             const screenshot = {
                 id: Date.now(),
                 timestamp: new Date(),
-                dataUrl: dataUrl,
+                dataUrl: response.dataUrl,
                 url: tab.url,
                 title: tab.title
             };
+
+            console.log('Screenshot captured, dataUrl length:', response.dataUrl?.length);
 
             this.screenshots.push(screenshot);
             
@@ -703,12 +825,14 @@ class SidePanelTestingAssistant {
                 }
                 targetStep.screenshots.push(screenshot);
                 
+                console.log(`Screenshot added to step ${stepIndex + 1}, total screenshots:`, targetStep.screenshots.length);
                 this.updateStepsList(); // Update steps list to show associated screenshots
                 this.showNotification(`Screenshot associated with Step ${stepIndex + 1}!`, 'success');
             }
             
             this.updateSessionInfo();
             this.saveData();
+            console.log('Screenshot saved successfully');
             
         } catch (error) {
             console.error('Screenshot error:', error);

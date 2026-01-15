@@ -5,10 +5,10 @@ A Chrome extension for QA engineers and testers to document exploratory test ses
 ## ✨ Features
 
 - 📝 **Test Step Management**: Add, view, and clear test steps with descriptions. Mark steps as completed.
-- 📸 **Screenshot Tracking**: Capture screenshots (via popup or context menu) and track their count. Screenshots are linked to steps and stored in extension storage (last 50 kept).
+- 📸 **Screenshot Tracking**: Capture screenshots directly in the sidebar and attach them to test steps. Screenshots are stored in extension storage.
 - 📋 **Script-Guided Testing**: Upload or paste a test script to guide your session. Steps from the script are shown as a checklist.
 - 📤 **Export Results**: Export your session data and steps in JSON or HTML format. Optionally include screenshots.
-- 🧩 **Multiple UIs**: Use the popup or sidepanel for flexible access to the assistant during testing.
+- 🧩 **Sidebar Access**: Open the extension in the browser sidebar for always-visible testing interface.
 
 ## 🛠️ Installation
 
@@ -67,8 +67,10 @@ ADO: 2408587
 - ⚙️ Choose format (JSON/HTML), and whether to include screenshots.
 - ⬇️ Click "Export Data" to download your report.
 
-### 🧩 Using the Sidepanel
-- 📌 Pin the assistant for persistent access via the sidepanel.
+### 🧩 Using the Sidebar
+- 📋 Click "Open in Sidebar" button in the popup or click the extension icon to open in the browser sidebar.
+- 📸 Use the screenshot button within each test step card to capture and attach screenshots.
+- ✅ Mark steps as Pass or Fail directly from the sidebar.
 
 ## ⚙️ Technical Details
 

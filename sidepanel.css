@@ -6,6 +6,7 @@
     --primary-hover: #5b21b6;
     --secondary-color: #64748b;
     --accent-color: #0ea5e9;
+    --accent-hover: #0284c7;
     --success-color: #10b981;
     --danger-color: #f59e0b;
     --warning-color: #f59e0b;
@@ -722,6 +723,40 @@ body {
 .context-close:hover {
     background: rgba(255, 255, 255, 0.3);
     transform: scale(1.1);
+}
+
+/* Screenshot preview styles */
+.step-screenshots {
+    margin-top: 8px;
+    margin-bottom: 8px;
+}
+
+.screenshot-preview {
+    margin-bottom: 8px;
+}
+
+.screenshot-thumbnail {
+    max-width: 100%;
+    height: auto;
+    border-radius: 4px;
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-sm);
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.screenshot-thumbnail:hover {
+    box-shadow: var(--shadow-md);
+    transform: scale(1.02);
+}
+
+.btn-screenshot {
+    background: var(--accent-color);
+    color: white;
+}
+
+.btn-screenshot:hover {
+    background: var(--accent-hover);
 }
 
 /* Dark mode support */
